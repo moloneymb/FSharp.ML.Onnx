@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="CodeGen.fsx" />
+    <Compile Include="ProtoBuf.fs" />
+    <None Include="Setup.fsx" />
+    <None Include="Scratch.fsx" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.11.4" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="OnnxMLProto">
+      <HintPath>onnx\csharp\OnnxMLProto.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

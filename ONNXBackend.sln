@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29509.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ONNXBackend", "ONNXBackend.fsproj", "{3FD156ED-5380-4603-AE99-B19D3FD2FE2A}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ONNXBackendTest", "ONNXBackendTest\ONNXBackendTest.fsproj", "{BF31718D-40BB-45F8-8C68-F6311A32A6E2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3FD156ED-5380-4603-AE99-B19D3FD2FE2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3FD156ED-5380-4603-AE99-B19D3FD2FE2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FD156ED-5380-4603-AE99-B19D3FD2FE2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3FD156ED-5380-4603-AE99-B19D3FD2FE2A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF31718D-40BB-45F8-8C68-F6311A32A6E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF31718D-40BB-45F8-8C68-F6311A32A6E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF31718D-40BB-45F8-8C68-F6311A32A6E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF31718D-40BB-45F8-8C68-F6311A32A6E2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {127CEA7C-9BCF-49DD-8F78-4104506B2A84}
+	EndGlobalSection
+EndGlobal
