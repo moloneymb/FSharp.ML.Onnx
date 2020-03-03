@@ -6,6 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="onnx_obj_model_code_gen.py" />
+    <None Include="onnx_schema.proto3" />
+    <None Include="SetupNotes.md" />
     <None Include="CodeGen.fsx" />
     <Compile Include="ProtoBuf.fs" />
     <None Include="Setup.fsx" />
@@ -20,7 +23,7 @@
 
   <ItemGroup>
     <Reference Include="OnnxMLProto">
-      <HintPath>onnx\csharp\OnnxMLProto.dll</HintPath>
+      <HintPath>..\protobuf\onnx\csharp\OnnxMLProto.dll</HintPath>
     </Reference>
   </ItemGroup>
 

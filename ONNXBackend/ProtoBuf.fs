@@ -178,3 +178,15 @@ let buildAndRunUnary<'a> (opName: string) (input1: Tensor<'a>)  =
 let buildAndRunBinary<'a> (opName: string) (input1: Tensor<'a>) (input2: Tensor<'a>)  = 
     runSingleOutputNode (binaryOp opName ("Op", "Input1", "Input2", "Output1")) [|input1;input2|]
 
+//type 'a = <uint8 | uint16 |uint32 |uint64 | int8 | int16 | int32 | int64 | float16 | float32 | float64 | string | bool | complex64 | complex128>
+//type S = seq<tensor<'a>>
+//type T = tensor<'a>
+//type I = <int32 | int64>
+
+//S ["seq(tensor(uint8))","seq(tensor(uint16))","seq(tensor(uint32))","seq(tensor(uint64))","seq(tensor(int8))","seq(tensor(int16))","seq(tensor(int32))","seq(tensor(int64))","seq(tensor(float16))","seq(tensor(float))","seq(tensor(double))","seq(tensor(string))","seq(tensor(bool))","seq(tensor(complex64))","seq(tensor(complex128))"]
+//T ["tensor(uint8)","tensor(uint16)","tensor(uint32)","tensor(uint64)","tensor(int8)","tensor(int16)","tensor(int32)","tensor(int64)","tensor(float16)","tensor(float)","tensor(double)","tensor(string)","tensor(bool)","tensor(complex64)","tensor(complex128)"]
+//I ["tensor(int32)","tensor(int64)"]
+//
+type ONNX() =
+    static member Abs(x) = buildAndRunUnary "Abs" x
+    

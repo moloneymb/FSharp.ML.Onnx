@@ -27,12 +27,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ONNXBackend.fsproj" />
+    <ProjectReference Include="..\ONNXBackend\ONNXBackend.fsproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="OnnxMLProto">
-      <HintPath>..\onnx\csharp\OnnxMLProto.dll</HintPath>
+      <HintPath>..\protobuf\onnx\csharp\OnnxMLProto.dll</HintPath>
     </Reference>
   </ItemGroup>
 
