@@ -7,7 +7,12 @@ open System
 open System.IO
 open Microsoft.ML.OnnxRuntime
 
+
+
 module MiniGraphs = 
+    type on = ONNXAPI.ONNX
+    type Tensor<'a> with
+        member this.shape = this.Dimensions.ToArray()
 
     let input1 = ArrayTensorExtensions.ToTensor(Array2D.create 1 32 2.f) :> Tensor<float32>
     let input2 = ArrayTensorExtensions.ToTensor(Array2D.create 32 1 3.f) :> Tensor<float32>
@@ -21,7 +26,7 @@ module MiniGraphs =
 
     [<Test>]
     let ``add float``() = 
-        let add x y = buildAndRunBinary "Add" x y
+        let add x y = buildAndRunBinary "Add" x y [||]
         let res1 = add input1 input2
         let res2 = add input1Int input2Int
         if res1.Dimensions.ToArray() <> [|32;32|] then failwith "Incorrect dimmesions"
@@ -34,7 +39,7 @@ module MiniGraphs =
         let xx = Array2D.create 2 2 0.f
         xx.[0,0] <- -1.0f
         xx.[1,1] <- 1.0f
-        let res = buildAndRunUnary "Relu" (ArrayTensorExtensions.ToTensor(xx) :> Tensor<float32>)
+        let res = buildAndRunUnary "Relu" (ArrayTensorExtensions.ToTensor(xx) :> Tensor<float32>) [||]
         Assert.AreEqual(float res.[0,0],float 0.0f,0.001)
         Assert.AreEqual(float res.[1,1],float 1.0f,0.001)
 
@@ -49,7 +54,7 @@ module MiniGraphs =
         Assert.AreEqual(float convRes.[0,0,0,0], 9.0, 0.001)
         Assert.AreEqual(float convRes.[0,0,5,5], 12.0, 0.001)
 
-    let matmul x y = buildAndRunBinary "MatMul" x y
+    let matmul x y = buildAndRunBinary "MatMul" x y [||]
 
     [<Test>]
     let ``matmul broadcast``() = 
@@ -65,6 +70,16 @@ module MiniGraphs =
         let res1 = matmul input4D1 input4D2
         Assert.AreEqual(res1.Dimensions.ToArray(), [|3;3;1;1|])
         Assert.AreEqual(res1.[0], 6.0f)
+
+    /// This 
+    [<Test>]
+    let ``eager api``() =
+        let input1 = ArrayTensorExtensions.ToTensor(Array2D.create 10000 40 -2.f) :> Tensor<float32>
+        let input2 = ArrayTensorExtensions.ToTensor(Array2D.create 40 10000 -2.f) :> Tensor<float32>
+        let res = on.MatMul(input2,on.Abs(input1))
+        Assert.AreEqual(res.shape, [|40;40|], "testing shape")
+        Assert.AreEqual(float res.[0,0], -40000., 0.00001, "testing math")
+        
 
 module FullModel = 
 
@@ -196,6 +211,25 @@ module FullModel =
         let mpData = writeModelToStream(mp)
 
         mpData |> testModel
+
+
+//    [<Test>]
+//    let ``eager mnist``() = 
+//        failwith "in-progress"
+        //let input = 
+//        reshape ("Times212_reshape1","Parameter193", "Parameter193_reshape1_shape","Parameter193_reshape1")
+//        cnn("Convolution28","Input3","Parameter5","Convolution28_Output_0",[|5L;5L|],[|1L;1L|],"SAME_UPPER",1L,[|1L;1L|])
+//        add ("Plus30", "Convolution28_Output_0", "Parameter6","Plus30_Output_0")
+//        relu("ReLU32","Plus30_Output_0","ReLU32_Output_0")
+//        maxPool("Pooling66","ReLU32_Output_0", "Pooling66_Output_0", [|2L;2L|],[|2L;2L|],[|0L;0L;0L;0L|],"NOTSET")
+//        cnn("Convolution110","Pooling66_Output_0","Parameter87","Convolution110_Output_0",[|5L;5L|],[|1L;1L|],"SAME_UPPER",1L,[|1L;1L|])
+//        add ("Plus112", "Convolution110_Output_0", "Parameter88" ,"Plus112_Output_0")
+//        relu("ReLU114", "Plus112_Output_0", "ReLU114_Output_0")
+//        maxPool("Pooling160","ReLU114_Output_0", "Pooling160_Output_0", [|3L;3L|],[|3L;3L|],[|0L;0L;0L;0L|],"NOTSET")
+//        reshape("Times212_reshape0","Pooling160_Output_0", "Pooling160_Output_0_reshape0_shape","Pooling160_Output_0_reshape0")
+//        matmul("Times212", "Pooling160_Output_0_reshape0", "Parameter193_reshape1", "Times212_Output_0")
+//        add("Plus214", "Times212_Output_0", "Parameter194" , "Plus214_Output_0")
+
 
 module ONNXExample = 
     [<Test>]

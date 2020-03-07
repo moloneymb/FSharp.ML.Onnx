@@ -26,33 +26,87 @@ type DataType =
     | FLOAT32 = 1
     | INT64   = 7
 
-let stringAttribute(name:string, value: string) =
+type Attr() =
+    static member float(name: string, value: float32) = 
+        Some(AttributeProto(Name = name, Type = AttributeProto.Types.AttributeType.Float, F = value))
+    static member float(name: string, value: float32 option, ?defaultValue: float32) = 
+        value |> Option.orElse defaultValue |> Option.bind (fun value -> Attr.float(name,value))
+        
+    static member floats(name: string, values: float32[]) = 
+        let x = AttributeProto(Name = name, Type = AttributeProto.Types.AttributeType.Floats)
+        x.Floats.AddRange(values)
+        Some(x)
+    static member floats(name: string, values: float32[] option, ?defaultValue: float32[]) = 
+        values |> Option.orElse defaultValue |> Option.bind(fun values -> Attr.floats(name,values))
+
+    static member string(name: string, value: string) =
+        Some(AttributeProto(Name = name, Type = AttributeProto.Types.AttributeType.String, S = Google.Protobuf.ByteString.CopyFrom(value, Encoding.UTF8)))
+    static member string(name: string, value: string option, ?defaultValue: string) =
+        value |> Option.orElse defaultValue |> Option.bind (fun value -> Attr.string(name,value))
+
+    static member strings(name: string, values: string[]) =
+        let x = AttributeProto(Name = name, Type = AttributeProto.Types.AttributeType.Strings)
+        x.Strings.AddRange([|for v in values -> Google.Protobuf.ByteString.CopyFrom(v, Encoding.UTF8)|])
+        Some(x)
+    static member strings(name: string, values: string[] option, ?defaultValue: string[]) =
+        values |> Option.orElse defaultValue |> Option.bind (fun values -> Attr.strings(name,values))
+
+    static member int(name:string, value: int64) =
+        Some(AttributeProto(Name = name, Type = AttributeProto.Types.AttributeType.Int, I = value))
+    static member int(name:string, value: int64 option, ?defaultValue: int64) =
+        value |> Option.orElse defaultValue |> Option.bind (fun value -> Attr.int(name,value))
+
+//    static member int(name: string, value: int64 option) =
+//        value |> Option.bind (fun value -> Attr.int(name,value))
+
+    static member ints(name: string, ints: int64[]) =
+        let ap = AttributeProto(Name = name, Type = AttributeProto.Types.AttributeType.Ints)
+        ap.Ints.AddRange(ints)
+        Some(ap)
+    static member ints(name: string, value: int64[] option, ?defaultValue: int64[]) =
+        value |> Option.orElse defaultValue |> Option.bind (fun value -> Attr.ints(name,value))
+
+let floatAttr(name: string, value: float32) = 
+    AttributeProto(Name = name, Type = AttributeProto.Types.AttributeType.Float, F = value)
+
+let floatsAttr(name: string, value: float32[]) = 
+    let x = AttributeProto(Name = name, Type = AttributeProto.Types.AttributeType.Floats)
+    x.Floats.AddRange(value)
+    x
+
+let stringAttr(name: string, value: string) =
     AttributeProto(Name = name, Type = AttributeProto.Types.AttributeType.String, S = Google.Protobuf.ByteString.CopyFrom(value, Encoding.UTF8))
 
-let intsAttribute(name:string, ints : int64[]) = 
+let stringsAttr(name: string, values: string[]) =
+    let x = AttributeProto(Name = name, Type = AttributeProto.Types.AttributeType.Strings)
+    x.Strings.AddRange([|for v in values -> Google.Protobuf.ByteString.CopyFrom(v, Encoding.UTF8)|])
+    x
+
+let intsAttr(name:string, ints: int64[]) = 
     let ap = AttributeProto(Name = name, Type = AttributeProto.Types.AttributeType.Ints)
     ap.Ints.AddRange(ints)
     ap
 
-let intAttribute(name: string, i: int64) = 
+let intAttr(name: string, i: int64) = 
     AttributeProto(Name = name, Type = AttributeProto.Types.AttributeType.Int, I = i)
 
 [<AutoOpen>]
 module Node = 
-    let simple op (name : string, inputs : string[], outputs : string[]) = 
+    let simple op (name: string, inputs: string[], outputs: string[], attributes: AttributeProto[]) = 
         let np = NodeProto(OpType = op, Name = name)
+        np.Attribute.AddRange(attributes)
         np.Input.AddRange(inputs)
         np.Output.AddRange(outputs)
         np
 
-    let unaryOp op (name: string, input: string, output: string) =
-        simple op (name, [|input|],[|output|])
+    let unaryOp op (attrs: AttributeProto[]) (name: string, input: string, output: string)  =
+        simple op (name, [|input|],[|output|],attrs)
 
-    let binaryOp op (name: string, left: string, right: string, output: string) =
-        simple op (name, [|left;right|],[|output|])
+    let binaryOp op (attrs: AttributeProto[]) (name: string, left: string, right: string, output: string)  =
+        simple op (name, [|left;right|],[|output|],attrs)
 
-    let reshape = binaryOp "Reshape"
-    let add = binaryOp "Add"
+    let reshape = binaryOp "Reshape" [||]
+    let add = binaryOp "Add" [||]
 
     let cnn(name: string, 
             input: string, 
@@ -63,14 +117,16 @@ module Node =
             auto_pad: string , 
             group: int64,
             dilations: int64[]) = 
-        let np = simple "Conv" (name, [|input;kernel|],[|output|])
-        [|
-            intsAttribute("kernel_shape", kernel_shape)// [|5L;5L|]
-            intsAttribute("strides", strides) // [|1L;1L|]
-            stringAttribute("auto_pad", auto_pad) //"SAME_UPPER"
-            intAttribute("group",group) // 1L
-            intsAttribute("dilations",dilations) //[|1L;1L|]
-        |] |> np.Attribute.AddRange
+
+        let attrs = [|
+            intsAttr("kernel_shape", kernel_shape)// [|5L;5L|]
+            intsAttr("strides", strides) // [|1L;1L|]
+            stringAttr("auto_pad", auto_pad) //"SAME_UPPER"
+            intAttr("group",group) // 1L
+            intsAttr("dilations",dilations) //[|1L;1L|]
+        |] 
+
+        let np = simple "Conv" (name, [|input;kernel|],[|output|],attrs)
         np
 
     let pool opType
@@ -81,21 +137,21 @@ module Node =
                 strides: int64[], 
                 pads: int64[], 
                 auto_pad : string) = 
-        let np = simple opType (name, [|input|],[|output|])
-        [|
-            intsAttribute("kernel_shape",kernel_shape)
-            intsAttribute("strides",strides)
-            intsAttribute("pads",pads)
-            stringAttribute("auto_pad",auto_pad)
 
-        |] |> np.Attribute.AddRange
+        let attrs = [|
+            intsAttr("kernel_shape",kernel_shape)
+            intsAttr("strides",strides)
+            intsAttr("pads",pads)
+            stringAttr("auto_pad",auto_pad)
+        |] 
+        let np = simple opType (name, [|input|],[|output|],attrs)
         np
 
     let maxPool = pool "MaxPool"
 
-    let relu(name: string, input: string, output: string) = unaryOp "Relu" (name, input,output)
+    let relu(name: string, input: string, output: string) = unaryOp "Relu" [||] (name, input,output)
 
-    let matmul = binaryOp "MatMul" 
+    let matmul = binaryOp "MatMul"  [||]
 
 
 let writeModelToStream(m: Onnx.ModelProto) = 
@@ -172,11 +228,15 @@ let runSingleOutputNode<'a> (node: NodeProto) (tensors: Tensor<'a>[]) : Tensor<'
     // NOTE: I'm expecting this not to leak memory
     res |> Seq.head |> fun x -> x.AsTensor<'a>().Clone()
 
-let buildAndRunUnary<'a> (opName: string) (input1: Tensor<'a>)  =
-    runSingleOutputNode (unaryOp opName ("Op", "Input1",  "Output1")) [|input1|]
+let buildAndRunUnary<'a> (opName: string) (input1: Tensor<'a>) (attrs: AttributeProto[])  =
+    runSingleOutputNode (unaryOp opName attrs ("Op", "Input1",  "Output1" )) [|input1|]
 
-let buildAndRunBinary<'a> (opName: string) (input1: Tensor<'a>) (input2: Tensor<'a>)  = 
-    runSingleOutputNode (binaryOp opName ("Op", "Input1", "Input2", "Output1")) [|input1;input2|]
+
+let buildAndRunBinary<'a> (opName: string) (input1: Tensor<'a>) (input2: Tensor<'a>) (attrs: AttributeProto[])  = 
+    runSingleOutputNode (binaryOp opName attrs ("Op", "Input1", "Input2", "Output1")) [|input1;input2|]
+
+let execNode<'a> (opName: string) (inputs: Tensor<'a>[]) (attrs: AttributeProto[]) =
+    runSingleOutputNode (simple opName ("Op",(inputs |> Array.mapi (fun i _ -> sprintf "Input%i" i)),[|"Output1"|],attrs)) inputs
 
 //type 'a = <uint8 | uint16 |uint32 |uint64 | int8 | int16 | int32 | int64 | float16 | float32 | float64 | string | bool | complex64 | complex128>
 //type S = seq<tensor<'a>>
@@ -187,6 +247,25 @@ let buildAndRunBinary<'a> (opName: string) (input1: Tensor<'a>) (input2: Tensor<
 //T ["tensor(uint8)","tensor(uint16)","tensor(uint32)","tensor(uint64)","tensor(int8)","tensor(int16)","tensor(int32)","tensor(int64)","tensor(float16)","tensor(float)","tensor(double)","tensor(string)","tensor(bool)","tensor(complex64)","tensor(complex128)"]
 //I ["tensor(int32)","tensor(int64)"]
 //
-type ONNX() =
-    static member Abs(x) = buildAndRunUnary "Abs" x
-    
+
+
+type X() =
+
+    static member F (x: int, [<System.ParamArray>] xs : int[]) = 
+        printfn "Args %A" xs
+        printfn "X %A" x
+
+
+        //failwith<int> "err"
+    //static member F ([<System.ParamArray>] xs : Tensor<int>, ?x : Tensor<int>, ?y:string) = 
+        //let attrs = [|Attr.string("x",y);Some(stringAttr("xx",""));y |> Option.map (fun x -> stringAttr("x",x))|] |> Array.choose id
+        //buildAndRunUnary "Abs" x attrs
+//        failwith "todo"
+
+//let xs: int[] = 
+//    failwith "todo"
+
+//X.F([|1;2;3|])    
+//X.F([|1;2|],2)    
+//X.F(1,2)
+//X.F(1)

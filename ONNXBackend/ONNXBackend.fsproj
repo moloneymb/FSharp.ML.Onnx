@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="onnx_code_gen.py" />
     <None Include="onnx_obj_model_code_gen.py" />
     <None Include="onnx_schema.proto3" />
     <None Include="SetupNotes.md" />
@@ -13,6 +14,7 @@
     <Compile Include="ProtoBuf.fs" />
     <None Include="Setup.fsx" />
     <None Include="Scratch.fsx" />
+    <Compile Include="ONNXAPI.g.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
