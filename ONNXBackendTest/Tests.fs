@@ -7,13 +7,14 @@ open System
 open System.IO
 open Microsoft.ML.OnnxRuntime
 
+type on = ONNXAPI.ONNX
 
+[<AutoOpen>]
+module X = 
+    type ONNXAPI.ONNX with
+        static member Reshape(x: Tensor<float32>,shape: int32[]) = on.Reshape(x,(shape |> Array.map int64).ToTensor())
 
 module MiniGraphs = 
-    type on = ONNXAPI.ONNX
-    type Tensor<'a> with
-        member this.shape = this.Dimensions.ToArray()
-
     let input1 = ArrayTensorExtensions.ToTensor(Array2D.create 1 32 2.f) :> Tensor<float32>
     let input2 = ArrayTensorExtensions.ToTensor(Array2D.create 32 1 3.f) :> Tensor<float32>
 
@@ -26,9 +27,8 @@ module MiniGraphs =
 
     [<Test>]
     let ``add float``() = 
-        let add x y = buildAndRunBinary "Add" x y [||]
-        let res1 = add input1 input2
-        let res2 = add input1Int input2Int
+        let res1 = on.Add(input1,input2)
+        let res2 = on.Add(input1Int,input2Int)
         if res1.Dimensions.ToArray() <> [|32;32|] then failwith "Incorrect dimmesions"
         if res1 |> Seq.exists (fun x -> x <> 5.f) then failwith "An incorrect value"
         if res2.Dimensions.ToArray() <> [|32;32|] then failwith "Incorrect dimmesions"
@@ -39,46 +39,40 @@ module MiniGraphs =
         let xx = Array2D.create 2 2 0.f
         xx.[0,0] <- -1.0f
         xx.[1,1] <- 1.0f
-        let res = buildAndRunUnary "Relu" (ArrayTensorExtensions.ToTensor(xx) :> Tensor<float32>) [||]
-        Assert.AreEqual(float res.[0,0],float 0.0f,0.001)
-        Assert.AreEqual(float res.[1,1],float 1.0f,0.001)
+        let res = on.Relu(ArrayTensorExtensions.ToTensor(xx) :> Tensor<float32>)
+        Assert.AreEqual(0.0, float res.[0,0], 0.001)
+        Assert.AreEqual(1.0, float res.[1,1], 0.001)
 
     [<Test>]
     let convolution() = 
-        let buildAndRunConv (input:Tensor<'a>, kernel:Tensor<'a>, kernel_shape: int64[], strides: int64[], auto_pad: string, group: int64, dilations: int64[]) = 
-            runSingleOutputNode (cnn("Op", "Input1", "Input2" , "Output1",kernel_shape, strides, auto_pad,group,dilations)) [|kernel;kernel|]
-
         let img = ArrayTensorExtensions.ToTensor(Array4D.create 1 1 32 32 1.f) :> Tensor<float32>
         let kernel = ArrayTensorExtensions.ToTensor(Array4D.create 8 1 5 5 1.f) :> Tensor<float32>
-        let convRes = buildAndRunConv(img,kernel,[|5L;5L|],[|1L;1L;1L;1L|],"SAME_UPPER",1L,[|1L;1L|])
-        Assert.AreEqual(float convRes.[0,0,0,0], 9.0, 0.001)
-        Assert.AreEqual(float convRes.[0,0,5,5], 12.0, 0.001)
-
-    let matmul x y = buildAndRunBinary "MatMul" x y [||]
+        let convRes = on.Conv(img, kernel, auto_pad= "SAME_UPPER")
+        Assert.AreEqual(9.0, float convRes.[0,0,0,0], 0.001)
+        Assert.AreEqual(25.0, float convRes.[0,0,5,5], 0.001)
 
     [<Test>]
     let ``matmul broadcast``() = 
-        let res1 = matmul input1 input2
-        Assert.AreEqual(res1.Dimensions.ToArray(), [|1;1|])
-        Assert.AreEqual(res1.[0], 192.0f)
-        let res2 = matmul input2 input1
-        Assert.AreEqual(res2.Dimensions.ToArray(), [|32;32|])
-        Assert.AreEqual(res2.[0], 6.0f)
+        let res1 = on.MatMul(input1,input2)
+        Assert.AreEqual([|1;1|], res1.shape)
+        Assert.AreEqual(192.0f, res1.[0])
+        let res2 = on.MatMul(input2,input1)
+        Assert.AreEqual([|32;32|], res2.shape)
+        Assert.AreEqual(6.0f, res2.[0])
 
     [<Test>]
     let ``matmul batch``() = 
-        let res1 = matmul input4D1 input4D2
-        Assert.AreEqual(res1.Dimensions.ToArray(), [|3;3;1;1|])
-        Assert.AreEqual(res1.[0], 6.0f)
+        let res1 = on.MatMul(input4D1,input4D2)
+        Assert.AreEqual([|3;3;1;1|], res1.Dimensions.ToArray())
+        Assert.AreEqual(6.0f, res1.[0])
 
-    /// This 
     [<Test>]
     let ``eager api``() =
         let input1 = ArrayTensorExtensions.ToTensor(Array2D.create 10000 40 -2.f) :> Tensor<float32>
         let input2 = ArrayTensorExtensions.ToTensor(Array2D.create 40 10000 -2.f) :> Tensor<float32>
         let res = on.MatMul(input2,on.Abs(input1))
-        Assert.AreEqual(res.shape, [|40;40|], "testing shape")
-        Assert.AreEqual(float res.[0,0], -40000., 0.00001, "testing math")
+        Assert.AreEqual([|40;40|], res.shape)
+        Assert.AreEqual(-40000., float res.[0,0], 0.00001)
         
 
 module FullModel = 
@@ -116,7 +110,7 @@ module FullModel =
 
     /// This is a full MNist example that exactly matches the pre-trained model
     [<Test>]
-    let ``code model``() =
+    let ``manual model``() =
         let nodes = 
             [|
                 reshape ("Times212_reshape1","Parameter193", "Parameter193_reshape1_shape","Parameter193_reshape1")
@@ -213,23 +207,31 @@ module FullModel =
         mpData |> testModel
 
 
-//    [<Test>]
-//    let ``eager mnist``() = 
-//        failwith "in-progress"
-        //let input = 
-//        reshape ("Times212_reshape1","Parameter193", "Parameter193_reshape1_shape","Parameter193_reshape1")
-//        cnn("Convolution28","Input3","Parameter5","Convolution28_Output_0",[|5L;5L|],[|1L;1L|],"SAME_UPPER",1L,[|1L;1L|])
-//        add ("Plus30", "Convolution28_Output_0", "Parameter6","Plus30_Output_0")
-//        relu("ReLU32","Plus30_Output_0","ReLU32_Output_0")
-//        maxPool("Pooling66","ReLU32_Output_0", "Pooling66_Output_0", [|2L;2L|],[|2L;2L|],[|0L;0L;0L;0L|],"NOTSET")
-//        cnn("Convolution110","Pooling66_Output_0","Parameter87","Convolution110_Output_0",[|5L;5L|],[|1L;1L|],"SAME_UPPER",1L,[|1L;1L|])
-//        add ("Plus112", "Convolution110_Output_0", "Parameter88" ,"Plus112_Output_0")
-//        relu("ReLU114", "Plus112_Output_0", "ReLU114_Output_0")
-//        maxPool("Pooling160","ReLU114_Output_0", "Pooling160_Output_0", [|3L;3L|],[|3L;3L|],[|0L;0L;0L;0L|],"NOTSET")
-//        reshape("Times212_reshape0","Pooling160_Output_0", "Pooling160_Output_0_reshape0_shape","Pooling160_Output_0_reshape0")
-//        matmul("Times212", "Pooling160_Output_0_reshape0", "Parameter193_reshape1", "Times212_Output_0")
-//        add("Plus214", "Times212_Output_0", "Parameter194" , "Plus214_Output_0")
+    [<Test>]
+    let ``eager mnist``() = 
+        let getTensorF(name,shape) =
+            let dts = File.ReadAllBytes(Path.Combine(mnistDir, name)) |> bytesToFloats
+            on.Reshape(ArrayTensorExtensions.ToTensor(dts) ,ArrayTensorExtensions.ToTensor(shape))
 
+        let p193 = getTensorF("Parameter193", [|16L; 4L; 4L; 10L|])
+        let p87  = getTensorF("Parameter87",  [|16L; 8L; 5L; 5L|])
+        let p5   = getTensorF("Parameter5",  [|8L; 1L; 5L; 5L|])
+        let p6   = getTensorF("Parameter6", [|8L; 1L; 1L|])
+        let p88  = getTensorF("Parameter88", [|16L; 1L; 1L|])
+        let p194 = getTensorF("Parameter194", [|1L; 10L|]) 
+
+        let mnist x = 
+            let f x p1 p2 k = on.MaxPool(on.Relu(on.Add(on.Conv(x,p1,auto_pad = "SAME_UPPER"),p2)),kernel_shape = [|k;k|], strides = [|k;k|]) |> fst
+            on.Add(on.MatMul(on.Reshape((f (f x p5 p6 2L) p87 p88 3L),[|1;256|]),on.Reshape(p193,[|256;10|])),p194)
+
+        let test_data = 
+            let f (x: TensorProto) = x.RawData.ToByteArray() |> X.bytesToFloats 
+            test_data.Force() |> Array.map (fun (x,y) -> (f x).ToTensor().Reshape([|1;1;28;28|]), f y)
+
+        for (index,(x,y1)) in Array.indexed(test_data) do
+            let y2 = mnist x
+            let diff = (y2.ToArray(),y1) ||> Array.zip |> Array.sumBy (fun (x,y) -> System.Math.Abs(x-y))
+            if diff > 0.1f then failwithf "Unexpected result in example %i with a difference of %f" index diff
 
 module ONNXExample = 
     [<Test>]

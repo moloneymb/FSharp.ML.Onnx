@@ -1,18 +1,13 @@
 ﻿# NOTE: This was run in Linux, it may be difficult to get onnx to work in Windows
 # NOTE: This is only API code generation, quotations transforms will need some other object model
 
-# TODO maybe do different type constraints
-
-# TODO nary inputs (in progress)
-#     unifying unary and binary
-#     variadic
-#     NOTE: The inputs appear to be structual, as in only the order matters
-#     multiple type constraints
-
-# TODO optional number of outputs?
+# TODO handle AttrType.TENSOR and AttrType.SPARSE_TENSOR for 'Constant' nodes
+# TODO variadic outputs
+# TODO handle seq, map, tensor
+# TODO special case SequenceAt
 # TODO code gen documentation
+# TODO consider returning anonomous types
 
-#len(conv.type_constraints)
 
 from onnx import defs
 from onnx import AttributeProto
@@ -45,117 +40,58 @@ def getSchemas():
     return [x for x in schemas if x.since_version == max_version[x.name]]
 
 schemas = getSchemas()
-unary_schemas = [schema for schema in schemas if (schema.min_input == 1) and (schema.max_input == 1) and (schema.min_output == 1) and (schema.max_output == 1)]
-binary_schemas = [schema for schema in schemas if (schema.min_input == 2) and (schema.max_input == 2) and (schema.min_output == 1) and (schema.max_output == 1)]
 
-# TODO code gen for multiple type constraints
-unary_schemas1 = [x for x in unary_schemas if len(x.type_constraints) == 1] # 75
-binary_schemas1 = [x for x in binary_schemas if len(x.type_constraints) == 1] # 16
+def hasType(z,schema):
+    return len([tc for tc in schema.type_constraints if len([y for y in tc.allowed_type_strs if z in y]) > 0]) > 0
 
-#binary_schemas1[0].inputs[0].name
-#binary_schemas1[0].inputs[1].name
+def mapNames(xs):
+    return [x.name for x in xs]
 
-schema = [x for x in schemas if x.name == "Softmax"][0]
+# TODO
+#['DictVectorizer', 'ConcatFromSequence', 'SplitToSequence', 'SequenceErase', 'SequenceAt', 'SequenceInsert', 'SequenceConstruct', 'ConstantOfShape', 'If', 'ZipMap', 'SequenceLength', 'Scan', 'Loop', 'Split', 'Constant', 'CastMap']
 
-conv = [x for x in schemas if x.name == "Conv"][0]
+todo_schemas = (['ConstantOfShape','Constant'] + # Attribute TENSOR or SPARSE_TENSOR #[x.name for x in schemas if len([attr for (_,attr) in x.attributes.items() if (attr.type == AttrType.TENSOR or attr.type == AttrType.SPARSE_TENSOR)]) > 0]
+                ['ConcatFromSequence', 'SplitToSequence', 'SequenceErase', 'SequenceAt', 'SequenceInsert', 'SequenceConstruct', 'SequenceEmpty', 'SequenceLength'] + #sequences [x.name for x in schemas if hasType("seq",x)]
+                ['DictVectorizer', 'ZipMap', 'CastMap'] + #maps [x.name for x in schemas if hasType("map",x)]
+                ['If', 'Scan', 'Loop', ] + # GRAPH Attribute # Loop has Combined Optional and Variadic inputs
+                ['Split'] + # variadic output
+                ['Cast'] + #Done 'to' attribute
+                ['SequenceEmpty', 'EyeLike', 'Multinomial', 'RandomUniformLike', 'RandomNormalLike', 'RandomNormal', 'RandomUniform'] + # Done 'dtype' in the attributes
+                ['TreeEnsembleClassifier', 'LSTM', 'LinearClassifier', 'SVMClassifier', 'MaxPool', 'GRU', 'TopK', 'Dropout', 'Unique', 'DynamicQuantizeLinear', 'RNN', 'BatchNormalization'] + # Done multi-outputs [x for x in schemas if (x.max_output != 1 or x.min_output != 1)]
+                ['LabelEncoder', 'CategoryMapper']) #Done # special case, these appear to have a single input and a single output with the same type...
 
-conv.inputs[0].name
-conv.inputs[1].name
+filtered = set(todo_schemas)
 
-conv.inputs[1].option == FormalParameterOption.Optional
-FormalParameterOption.Optional
-FormalParameterOption.Single
-FormalParameterOption.Single
-FormalParameterOption.Variadic
+schemas1 = list(filter(lambda x: x.name not in filtered, schemas))
 
-# NOTE: Single inputs allways appear before Optional
-# NOTE: Variadic inputs are at most one and are always last
-# TODO: Only 'Loop' has Variadic and Optional
+def getSchema(name):
+    return [x for x in schemas if x.name == name][0]
 
-def anyOptionalBeforeSingle(schema):
-    hasOptional = False
-    for x in schema.inputs:
-        if x.option == FormalParameterOption.Optional or x.option == FormalParameterOption.Variadic:
-            hasOptional = True
-        else:
-            if x.option == FormalParameterOption.Single:
-                if hasOptional:
-                    return True
-    return False
+def filterSchemas(xs,yss):
+    filterx = set(mapNames([y for ys in yss for y in ys]))
+    return [x for x in xs if x.name not in filterx]
 
-#set([anyOptionalBeforeSingle(schema) for x in schemas])
-
-def countVariadic(schema):
-    return len([x for x in schema.inputs if x.option == FormalParameterOption.Variadic])
-
-def countOptional(schema):
-    return len([x for x in schema.inputs if x.option == FormalParameterOption.Optional])
-
-#def         FormalParameterOption.Variadic]
-
-#[schema.inputs for schema in schemas]
-
-#countby(lambda x: x,[countVariadic(schema) for schema in schemas])
-
-countby(lambda x: x,[countVariadic(schema) for schema in schemas])
-
-#[schema.inputs[len(schema.inputs) - 1].option == FormalParameterOption.Variadic for schema in schemas if countVariadic(schema) == 1]
-
-variadic_schemas = [schema for schema in schemas if countVariadic(schema) == 1]
-
-variadic_schemas[7].inputs[0].name
-variadic_schemas[7].inputs[1].name
-variadic_schemas[7].inputs[2].name
-
-single_outputs = ([x for x in schemas if x.min_input > 0 and x.max_output == 1 and x.min_output == 1 and x.name != 'Loop' and len(x.type_constraints) == 1])
-
-
-'NonMaxSuppression' #has no type constraint
-'StringNormalizer'
-
-
-#150/175 have single output
-
-# NOTE 110/174 ops have a single output and a single type constraint
-# NOTE 38/174 ops have a single output and a single type constraint
-
-len(unary_schemas)
-len(binary_schemas)
-
-
-#93+28
-#110+39
-
-# NOTE Loop has multiple outputs
-
-#single_output_schemas = 
-#len(schemas)
-
-for (x,count) in countby(lambda x: x, ["(%i,%i) -> (%i,%i)" % (x.min_input, x.max_input, x.min_output, x.max_output) for x in schemas]).items():
-#variadic_schemas[7].inputs[2].option
-#variadic_schemas[7].name
-#variadic_schemas[7].type_constraints
-
-[countOptional(schema) for schema in schemas if countVariadic(schema) == 1]
-
-variadic = [x for schema in schemas for x in schema.inputs if x.option == FormalParameterOption.Variadic]
-
-#len(variadic)
-
-#NOTE: Presuming Variadic inputs as assumed to be last
-
-
-#conv.inputs[1].option
-
-
-dir(conv.inputs[2])
-
-list(schema.attributes.items())[0]
+so_zero_type = ([x for x in schemas1 if len(x.type_constraints) == 0]) # ['NonMaxSuppression', 'StringNormalizer'] # 2
+so_single_type = ([x for x in schemas1 if len(x.type_constraints) == 1]) # 105
+so_single_output_type = ([x for x in schemas1 if len(x.type_constraints) == 2 and len(list(x.outputs[0].types)) == 1]) # 11
+so_multi_type = [x for x in filterSchemas(schemas1,[so_single_type, so_single_output_type ]) if len(x.type_constraints) > 1] 
 
 def wrap(x,y):
     def f(z):
         return x + z + y
     return f
+
+def getTypeMappings(schema):
+    def combinations(xss):
+        def recCombInner(acc,xss):
+            if len(xss) == 0:
+                yield acc
+            else:
+                head, *tail = xss
+                for x in head:
+                    yield from recCombInner(acc + [x], tail)
+        return recCombInner([],xss)
+    return [{y:x for (x,y) in zip(xs,[z.type_param_str for z in schema.type_constraints])}  for xs in list(combinations([x.allowed_type_strs for x in schema.type_constraints]))]
 
 quote = wrap("\"","\"")
 quote = wrap("\"","\"")
@@ -225,6 +161,26 @@ def mapONNXToFSharp(name):
     }
     return mapping.get(name)
 
+def mapONNXToDtype(name):
+    mapping = {
+        "tensor(uint8)" : 2,
+        "tensor(uint16)" : None, #4
+        "tensor(uint32)" : None, #12
+        "tensor(uint64)" : None, #13
+        "tensor(int8)" : 3, 
+        "tensor(int16)" : None, #5
+        "tensor(int32)" : 6,
+        "tensor(int64)" : 7,
+        "tensor(float16)" : None, #10
+        "tensor(float)" : 1,
+        "tensor(double)" : None, #11, #limiting it for now
+        "tensor(string)" : 8,
+        "tensor(bool)" : 9,
+        "tensor(complex64)" : None, #14
+        "tensor(complex128)" : None, #15
+    }
+    return mapping.get(name)
+
 def choseFSharpTypes(type_constraint):
     return [mapONNXToFSharp(x) for x in type_constraint.allowed_type_strs if mapONNXToFSharp(x)]
 
@@ -271,121 +227,55 @@ def mapDefaultValue(default_value):
     else:
         raise Exception(f'unsupported default value of type {default_value.type}')
 
-
-#f_test = [attr.default_value for schema in schemas for (name,attr) in schema.attributes.items() if attr.default_value.type == 8][0]
-
-mapDefaultValue(f_test)
-
-
-#f_test.ints
-#f', {getByteStrings(f_test.strings)}'
-#b'a'.decode()
-
-#type(b'a')
-
-#f_test.strings[0]
-
-#TODO get one of the string attributes with default values
-
-
-#0,3,2,1,7,8
-
 def partition(f,xs):
     return ([x for x in xs if f(x)],[x for x in xs if not f(x)])
 
-
-#TODO split attributes by optional
-#[f'{attr.name}: {mapAttrType(attr)}' for attr in req_attrs]
-
-#schema.attributes
-#len(unary_schemas)
-#print_schema(unary_schemas[0])
-#mapONNXToFSharp("tensor(uint8)")
-#mapONNXToFSharp("tensor(float)")
-#unary
-#[len(x.type_constraints) for x in unary_schemas] 
-#[len(x.type_constraints) for x in unary_schemas]
-#[len(x.type_constraints) for x in binary_schemas][9]
-
-#TODO handle seq, map, tensor
-#print_schema(unary_schemas[2])
-#print_schema(binary_schemas[9])
-
-#special case SequenceAt
-
-#len([x  for x in schemas if len(x.type_constraints) == 3])
-#[x.name  for x in schemas if len(x.type_constraints) == 3]
-
-#def getSchema(name):
-#    return [x for x in schemas if x.name == name][0]
-
-#print_schema(getSchema("QLinearConv"))
-#print_schema(getSchema("MatMulInteger"))
-
 for (x,count) in countby(lambda x: x, ["(%i,%i) -> (%i,%i)" % (x.min_input, x.max_input, x.min_output, x.max_output) for x in schemas]).items():
     print(f'{count}: {x}')
-
-# NOTE Figuring out how to do attributes
-x.attribute for x in schemas
-
-countby(lambda x: x, [attr.default_value.type for schema in schemas for (name,attr) in schema.attributes.items()])
-
-defaults = [attr.default_value for schema in schemas for (name,attr) in schema.attributes.items() if attr.default_value.type != 0]
-
-
-#NOTE Nothing with defaults is required
-set([attr.required for schema in schemas for (name,attr) in schema.attributes.items() if attr.default_value.type != 0])
-
-[attr.name for schema in schemas for (name,attr) in schema.attributes.items() if attr.default_value.type == 0 and attr.required]
-
-attr = [attr for schema in schemas for (name,attr) in schema.attributes.items() if attr.default_value.type == 0 and attr.required][0]
-
-#for now filter it down to uint8, int32, int64, float32, bool, string
-# [x for x in schemas if x.min_output == 2 and x.max_output == 2]
-
-#set([attr.type for x in schemas for (_,attr) in x.attributes.items()])
-
-# TODO examine AttrType.TENSOR, AttrType.GRAPH, and AttrType.SPARSE_TENSOR
-
-[x.name for x in schemas if x.min_output == 1 and x.max_output == 2]
-[x.name for x in schemas if x.min_output == 3 and x.max_output == 3]
-[x.name for x in schemas if x.max_output > 1000]
-[x.name for x in schemas if x.max_input == 1 and x.max_output > 1000]
-
 
 def filterAttrType(t):
     def f(x):
         return t in set([y.type for (_,y) in x.attributes.items()])
     return f
 
+def optionalChoose(x):
+    return f'([|{x}|] |> Array.choose id)' if x else '[||]'
 
-#[x.name for x in schemas if filterAttrType(AttrType.GRAPH)(x)]
-#GRAPH is If, Scan, Loop
-#[x.name for x in schemas if filterAttrType(AttrType.TENSOR)(x)]
-#TENSOR is ConstantOfShape, Constant
-#[x.name for x in schemas if filterAttrType(AttrType.SPARSE_TENSOR)(x)]
-#SPARSE_TENSOR is Constant
+def inputParamString(x,typeMap):
+    t = f'Tensor<{typeMap(x.typeStr) if typeMap(x.typeStr) is not None else mapONNXToFSharp(x.typeStr)}>' 
+    if x.option == FormalParameterOption.Single: return f'{x.name}: {t}'
+    elif x.option == FormalParameterOption.Optional: return f'?{x.name}: {t}'
+    elif  x.option == FormalParameterOption.Variadic: return f'[<ParamArray>]{x.name}: {t}[]'
+    else: raise Exception("shouldn't happen")
 
-#[x.attributes.items() for x in  schemas]
-#['If', 'Scan', 'Loop', 'Split']
-
-# -> (0,2) "GRU","RNN"
-# -> (0,3) "LSTM"
-
-#print_schema(getSchema('LSTM'))
-#print_schema(getSchema('GRU'))
-# (5,5) -> (1,5)
-#print_schema(getSchema('BatchNormalization'))
-
-# TODO figure out how optional inputs result in optional outputs
-# AFAIK Optional outputs are always available but don't have to be used
-
-# TODO, how do we deal with Optional outputs such as LSTM, it seems that it depends on the optional inputs. May need to special case it.
+def partitionInputs(inputs):
+    xs,ys,zs = [],[],[]
+    for x in inputs:
+        if x.option == FormalParameterOption.Single:
+            xs.append(x)
+        elif x.option == FormalParameterOption.Optional:
+            ys.append(x)
+        elif  x.option == FormalParameterOption.Variadic:
+            zs.append(x)
+        else: raise Exception("shouldn't happen")
+    return (xs,ys,zs)
 
 
-# NOTE: These are uncommon
-#[x.name for x in schemas if x.min_output == 2 and x.max_output == 2]
-#['TreeEnsembleClassifier', 'LinearClassifier', 'SVMClassifier', 'TopK']
+def get_part_inputs_and_attrs(schema):
+    (req_inputs,opt_inputs,var_inputs) = partitionInputs(schema.inputs)
+    (req_attrs, opt_attrs) = partition(lambda x: x.required, [x for (_,x) in schema.attributes.items()])
+    return (req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs)
+
+def get_params(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap):
+    params = ", ".join(
+        [inputParamString(x, typeMap) for x in req_inputs] + 
+        [f'{x.name}: {mapAttrType(x)}' for x in req_attrs] + 
+        [inputParamString(x, typeMap) for x in var_inputs] +
+        [inputParamString(x, typeMap) for x in opt_inputs] + 
+        [f'?{x.name}: {mapAttrType(x)}' for x in opt_attrs])
+    return params
+
+
 
 ####################################################################################################
 #                     Code Gen
@@ -405,106 +295,159 @@ fo.write("open ProtoBuf\n")
 fo.write("\n")
 fo.write("type ONNX() =\n")
 
-def optionalParam(x):
-    return ', ' + x if x else ''
-
-def optionalChoose(x):
-    return f'([|{x}|] |> Array.choose id)' if x else '[||]'
-
-def inputParamString(x,typeMap):
-    t = f'Tensor<{typeMap(x.typeStr)}>' 
-    if x.option == FormalParameterOption.Single: return f'{x.name}: {t}'
-    elif x.option == FormalParameterOption.Optional: return f'?{x.name}: {t}'
-    elif  x.option == FormalParameterOption.Variadic: return f'[<ParamArray>]{x.name}: {t}[]'
-    else: raise Exception("shouldn't happen")
-
-def partitionInputs(inputs):
-    xs,ys,zs = [],[],[]
-    for x in inputs:
-        if x.option == FormalParameterOption.Single:
-            xs.append(x)
-        elif x.option == FormalParameterOption.Optional:
-            ys.append(x)
-        elif  x.option == FormalParameterOption.Variadic:
-            zs.append(x)
-        else: raise Exception("shouldn't happen")
-    return (xs,ys,zs)
-
-# NOTE: All required appear before optional
-# NOTE: Variadic appear last and without optional (unless it's a 'Loop' op)
-
-
-def typeMap(x): 
-    return "float"
-
-#        params = ", ".join([f'{"" if req else "?"}{attr.name}: {mapAttrType(attr)}' for (req,attr) in attrs])
-
-", ".join(
-    [inputParamString(x, typeMap) for x in req_inputs] + 
-    [f'{x.name}: {mapAttrType(x)}' for x in req_attrs] + 
-    [inputParamString(x, typeMap) for x in opt_inputs] + 
-    [f'?{x.name}: {mapAttrType(x)}' for x in opt_attrs] + 
-    [inputParamString(x, typeMap) for x in var_inputs]
-    )
-
-schema = conv
-
-(req_inputs,opt_inputs,var_inputs) = partitionInputs(schema.inputs)
-(req_attrs, opt_attrs) = partition(lambda x: x.required, [x for (_,x) in schema.attributes.items()])
 # NOTE: Req inputs, Req attr, Opt inputs, Opt attr, Var inputs
-param_string = ""
-
-#params = ", ".join([f'{"" if req else "?"}{attr.name}: {mapAttrType(attr)}' for (req,attr) in attrs])
 
 
+schemas_out = []
 
-#parameterString(schemas[10],(lambda x: "x"))
+def code_gen_single_output(fo,schema,typeMap,outputTypes):
+    (req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs) = get_part_inputs_and_attrs(schema)
+    opt_attrs = [x for x in opt_attrs if not ("Pool" in schema.name and x.name == "ceil_mode")] # Should figure out how
+    params = get_params(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
+    fo.write(f'    static member {schema.name}({params}) =')
+    attrProto = "; ".join([f'Attr.{mapAttrFunction(attr)}("{attr.name}", {attr.name}{mapDefaultValue(attr.default_value)})' for attr in (req_attrs + opt_attrs)])
+    inputs = ""
+    def wrapTensor(x):
+        return f'mv.c({x})'
+    # NOTE We're assuming inputs are matched structually by order
+    if len(opt_inputs) == 0 and len(var_inputs) == 0: #only req_inputs
+        inputs = '[|' + '; '.join([wrapTensor(x.name) for x in req_inputs]) + '|]'
+    elif len(opt_inputs) != 0 and len(var_inputs) == 0:
+        inputs = '([|' + '; '.join([f'Some({wrapTensor(x.name)})' for x in req_inputs] + [wrapTensor(x.name) for x in opt_inputs]) + '|] |> Array.choose id)'
+    elif len(opt_inputs) == 0 and len(var_inputs) != 0:
+        if len(req_inputs) == 0: inputs = f'({wrapTensor(var_inputs[0].name)})'
+        else: inputs = '([|' + '; '.join([f'yield {wrapTensor(x.name)}' for x in req_inputs] + [f'yield! {wrapTensor(x.name)}' for x in var_inputs]) + '|])'
+    elif len(opt_inputs) != 0 and len(var_inputs) != 0:
+        raise Exception("ops with both optional and variadic inputs are not yet supported")
+    else:
+        raise Exception("shouldn't happen")
+    if isinstance(outputTypes,list):
+        outputs = ", ".join(outputTypes)
+        print(outputTypes)
+        fo.write(f'\n        MV() |> fun mv -> execNodeTuple{len(outputTypes)}<{outputs}> "{schema.name}" {inputs} {optionalChoose(attrProto)}\n')
+    else:
+        fo.write(f'\n        MV() |> fun mv -> execNode<{outputTypes}> "{schema.name}" {inputs} {optionalChoose(attrProto)}\n')
 
-#countVariadic(schema)
-#countOptional(schema)
-
-
-def code_gen_single_output(fo,schema):
+# single type constraints
+for schema in so_single_type:
+    print(f'{schema.name}')
+    schemas_out.append(schema.name)
     for t in choseFSharpTypes(schema.type_constraints[0]):
-        req_attrs, opt_attrs = partition(lambda x: x.required, [x for (_,x) in schema.attributes.items()])
-        #attrs = [(True,x) for x in req_attrs] + [(False,x) for x in opt_attrs]
-        fo.write(f'    static member {schema.name}({input_name}: Tensor<{t}>{optionalParam(params)}) =')
-        attrProto = "; ".join([f'Attr.{mapAttrFunction(attr)}("{attr.name}", {attr.name}{mapDefaultValue(attr.default_value)})' for (req,attr) in attrs])
-        fo.write(f'        execNode "{schema.name}" {input_name} {optionalChoose(attrProto)}')
-        fo.write('\n')
+        code_gen_single_output(fo,schema,(lambda x: t if mapONNXToFSharp(x) is None else mapONNXToFSharp(x)),t)
 
-#def code_gen_unary(fo,schema):
-#    for t in choseFSharpTypes(schema.type_constraints[0]):
-#        input_name = schema.inputs[0].name
-#        req_attrs, opt_attrs = partition(lambda x: x.required, [x for (_,x) in schema.attributes.items()])
-#        attrs = [(True,x) for x in req_attrs] + [(False,x) for x in opt_attrs]
-#        params = ", ".join([f'{"" if req else "?"}{attr.name}: {mapAttrType(attr)}' for (req,attr) in attrs])
-#        fo.write(f'    static member {schema.name}({input_name}: Tensor<{t}>{optionalParam(params)}) =')
-#        attrProto = "; ".join([f'Attr.{mapAttrFunction(attr)}("{attr.name}", {attr.name}{mapDefaultValue(attr.default_value)})' for (req,attr) in attrs])
-#        fo.write(f'        buildAndRunUnary "{schema.name}" {input_name} {optionalChoose(attrProto)}')
-#        fo.write('\n')
-#
-#def code_gen_binary(fo,schema):
-#    for t in choseFSharpTypes(schema.type_constraints[0]):
-#        input_nameA = schema.inputs[0].name
-#        input_nameB = schema.inputs[1].name
-#        req_attrs, opt_attrs = partition(lambda x: x.required, [x for (_,x) in schema.attributes.items()])
-#        attrs = [(True,x) for x in req_attrs] + [(False,x) for x in opt_attrs]
-#        params = ", ".join([f'{"" if req else "?"}{attr.name}: {mapAttrType(attr)}' for (req,attr) in attrs])
-#        fo.write(f'    static member {schema.name}({input_nameA}: Tensor<{t}>, {input_nameB}: Tensor<{t}>{optionalParam(params)}) =')
-#        fo.write('\n')
-#        attrProto = "; ".join([f'Attr.{mapAttrFunction(attr)}("{attr.name}", {attr.name}{mapDefaultValue(attr.default_value)})' for (req,attr) in attrs])
-#        fo.write(f'        buildAndRunBinary "{schema.name}" {input_nameA} {input_nameB} ([|{attrProto}|] |> Array.choose id)')
-#        fo.write('\n')
+# two type constraints one for input one for output, output only has one type
+for schema in so_single_output_type:
+    print(f'{schema.name}')
+    schemas_out.append(schema.name)
+    output_type = [tc.allowed_type_strs for tc in schema.type_constraints if tc.type_param_str == schema.outputs[0].typeStr][0][0]
+    #TODO check that inputs all have the same typeStr...
+    input_types = [tc.allowed_type_strs for tc in schema.type_constraints if tc.type_param_str == schema.inputs[0].typeStr][0]
+    for t in [mapONNXToFSharp(x) for x in input_types if mapONNXToFSharp(x)]:
+        code_gen_single_output(fo,schema,(lambda x: t if mapONNXToFSharp(x) is None else mapONNXToFSharp(x)),mapONNXToFSharp(output_type))
 
-for schema in unary_schemas1:
-    code_gen_unary(fo,schema)
+for schema in so_multi_type:
+    print(f'{schema.name}')
+    schemas_out.append(schema.name)
+    for type_mappings in getTypeMappings(schema):
+        # skip if we contain unsupported types
+        if len([v for (_,v) in type_mappings.items() if mapONNXToFSharp(v) is None ]) == 0:
+            output_type = mapONNXToFSharp(type_mappings.get(schema.outputs[0].typeStr))
+            code_gen_single_output(fo,schema,(lambda x: mapONNXToFSharp(type_mappings.get(x))),output_type)
 
-for schema in binary_schemas1:
-    code_gen_binary(fo,schema)
+for schema in so_zero_type:
+    print(f'{schema.name}')
+    schemas_out.append(schema.name)
+    code_gen_single_output(fo,schema,(lambda x: None),mapONNXToFSharp(schema.outputs[0].typeStr))
+
+for schemaName in ['LabelEncoder', 'CategoryMapper']:
+    schema = getSchema(schemaName)
+    print(f'{schema.name}')
+    schemas_out.append(schema.name)
+    # TODO WARN NOTE The output type appears unconstrained, we're going to assume that it is constrained to the only input
+    for t in schema.type_constraints[0].allowed_type_strs:
+        code_gen_single_output(fo,schema,(lambda x: mapONNXToFSharp(t)),mapONNXToFSharp(t))
+
+for schemaName in ['SequenceEmpty', 'EyeLike', 'Multinomial', 'RandomUniformLike', 'RandomNormalLike', 'RandomNormal', 'RandomUniform', 'Cast']:
+    schema = getSchema(schemaName)
+    print(f'{schema.name}')
+    schemas_out.append(schema.name)
+    typeMaps = [t for t in schema.inputs[0].types if mapONNXToFSharp(t) is not None] if len(schema.inputs) == 1 else [""]
+    for t in typeMaps:
+        typeMap = lambda x: mapONNXToFSharp(t)
+        (req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs) = get_part_inputs_and_attrs(schema)
+        for (gen1,gen2) in ([("<'a>","'a")] if (len(schema.inputs) == 0 or schema.name == "Cast") else [("<'a>","'a"),("",mapONNXToFSharp(t))]):
+            req_attrs = [x for x in req_attrs if x.name != 'dtype' and x.name != 'to']
+            opt_attrs = [x for x in opt_attrs if x.name != 'dtype' and x.name != 'to']
+            params = get_params(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
+            fo.write(f'    static member {schema.name}{gen1}({params}) =')
+            attrProto = "; ".join([f'Attr.{mapAttrFunction(attr)}("{attr.name}", {attr.name}{mapDefaultValue(attr.default_value)})' for attr in (req_attrs + opt_attrs)])
+            # NOTE We're assuming inputs are matched structually by order
+            inputs = '[|' + '; '.join([f'MV.mv(1,{x.name})' for x in req_inputs]) + '|]'
+            dtypes = "; ".join([str(mapONNXToDtype(x)) + "L" for x in  schema.outputs[0].types if mapONNXToDtype(x) is not None])
+            fo.write(f'\n        execNodeCheck<{gen2}> "{schema.name}" {inputs} [|{dtypes}|] {optionalChoose(attrProto)}\n')
+
+for schemaName in ['TreeEnsembleClassifier', 'LSTM', 'LinearClassifier', 'SVMClassifier', 'MaxPool', 'GRU', 'TopK', 'Dropout', 'Unique', 'DynamicQuantizeLinear', 'RNN', 'BatchNormalization']:
+    schema = getSchema(schemaName)
+    schemas_out.append(schema.name)
+    print(f'{schema.name}')
+    for type_mappings in getTypeMappings(schema):
+        if not('Classifier' in schemaName and mapONNXToFSharp(type_mappings.get(schema.outputs[0].typeStr)) == "string"):
+            # skip if we contain unsupported types
+            if len([v for (_,v) in type_mappings.items() if mapONNXToFSharp(v) is None ]) == 0:
+                output_types = [mapONNXToFSharp(type_mappings.get(x.typeStr) if type_mappings.get(x.typeStr) is not None else x.typeStr) for x in schema.outputs]
+                code_gen_single_output(fo,schema,(lambda x: mapONNXToFSharp(type_mappings.get(x))),output_types)
 
 fo.flush()
 fo.close()
+
+
+# All optional to be treated as required, unused will be filtered out later
+
+(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs) = get_part_inputs_and_attrs(schema)
+
+dir(schema)
+#(getSchema('QuantizeLinear').inputs[0]).typeStr
+#andir(getSchema('QuantizeLinear').inputs[1])
+#dir(getSchema('QuantizeLinear').inputs[1])
+
+####################################################################################################
+#                     NOTES
+####################################################################################################
+
+#conv.inputs[0].name
+#conv.inputs[1].name
+#conv.inputs[1].option == FormalParameterOption.Optional
+#FormalParameterOption.Single
+#FormalParameterOption.Optional
+#FormalParameterOption.Variadic
+
+# NOTE: Single inputs allways appear before Optional
+# NOTE: Variadic inputs are at most one and are always last
+# TODO: Only 'Loop' has Variadic and Optional
+
+#def anyOptionalBeforeSingle(schema):
+#    hasOptional = False
+#    for x in schema.inputs:
+#        if x.option == FormalParameterOption.Optional or x.option == FormalParameterOption.Variadic:
+#            hasOptional = True
+#        else:
+#            if x.option == FormalParameterOption.Single:
+#                if hasOptional:
+#                    return True
+#    return False
+#
+##set([anyOptionalBeforeSingle(schema) for x in schemas])
+#
+#def         FormalParameterOption.Variadic]
+
+#[schema.inputs for schema in schemas]
+
+#countby(lambda x: x,[countVariadic(schema) for schema in schemas])
+
+#countby(lambda x: x,[countVariadic(schema) for schema in schemas])
+
+#[schema.inputs[len(schema.inputs) - 1].option == FormalParameterOption.Variadic for schema in schemas if countVariadic(schema) == 1]
+
 #import time
 #import numpy as np
 #input1 = np.ones((10000000,40),np.float32) * -2.0
@@ -518,10 +461,15 @@ fo.close()
 #end
 #start
 
+#'NonMaxSuppression' #has no type constraint
+#'StringNormalizer'
 
-####################################################################################################
-#                     Default Experiments
-####################################################################################################
 
-#defaults = [attr.default_value for x in schemas for (_,attr) in x.attributes.items() if attr.default_value.type != 0]
-#len(defaults)
+#def countVariadic(schema):
+#    return len([x for x in schema.inputs if x.option == FormalParameterOption.Variadic])
+#
+#def countOptional(schema):
+#    return len([x for x in schema.inputs if x.option == FormalParameterOption.Optional])
+#
+#variadic_schemas = [schema for schema in schemas if countVariadic(schema) == 1]
+
