@@ -99,9 +99,17 @@ type Attr() =
         t.FloatData.AddRange(x.ToArray())
         Some(AttributeProto(Type = AttributeProto.Types.AttributeType.Tensor, T = t))
 
-    // TODO Code Gen Attr.tensor
-    static member tensor(x: Tensor<int>) : TensorProto = 
-        failwith "todo"
+    static member tensor(x: Tensor<int32>) : AttributeProto option = 
+        let t = TensorProto(DataType = int DataType.INT32)
+        t.Dims.AddRange(x.Dimensions.ToArray() |> Array.map int64)
+        t.Int32Data.AddRange(x.ToArray())
+        Some(AttributeProto(Type = AttributeProto.Types.AttributeType.Tensor, T = t))
+
+    static member tensor(x: Tensor<int64>) : AttributeProto option = 
+        let t = TensorProto(DataType = int DataType.INT64)
+        t.Dims.AddRange(x.Dimensions.ToArray() |> Array.map int64)
+        t.Int64Data.AddRange(x.ToArray())
+        Some(AttributeProto(Type = AttributeProto.Types.AttributeType.Tensor, T = t))
 
 [<AutoOpen>]
 module X =
@@ -134,10 +142,6 @@ module X =
                 if tp.RawData.Length > 0 then tp.RawData.ToByteArray() |> bytesToFloats
                 else tp.FloatData |> Seq.toArray
             DenseTensor<float32>(System.Memory<float32>(data),System.ReadOnlySpan<int>(dims))
-
-//type Tensor<'a> with
-//    member this.ToArray() = this.ToDenseTensor().Buffer.ToArray()
-//    member this.shape = this.Dimensions.ToArray()
 
 type 'a``[]`` with
     member x.ToTensor() = ArrayTensorExtensions.ToTensor(x)

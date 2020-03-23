@@ -7,6 +7,8 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "ONNXBackendTest", "ONNXBack
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "ONNXBackend", "ONNXBackend\ONNXBackend.fsproj", "{754B69FD-7C29-40E2-8C62-74F3BB6D7EF6}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "QuotationTransformer", "QuotationTransformer\QuotationTransformer.fsproj", "{57DEF42D-5DD0-403E-A4F1-EDC0DC858C4D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{754B69FD-7C29-40E2-8C62-74F3BB6D7EF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{754B69FD-7C29-40E2-8C62-74F3BB6D7EF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{754B69FD-7C29-40E2-8C62-74F3BB6D7EF6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57DEF42D-5DD0-403E-A4F1-EDC0DC858C4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57DEF42D-5DD0-403E-A4F1-EDC0DC858C4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57DEF42D-5DD0-403E-A4F1-EDC0DC858C4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57DEF42D-5DD0-403E-A4F1-EDC0DC858C4D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

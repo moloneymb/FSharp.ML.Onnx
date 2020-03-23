@@ -84,7 +84,6 @@ module FullModel =
     let mnistDir = Path.Combine(__SOURCE_DIRECTORY__,"..","data","mnist")
 
     let test_data = 
-        lazy
             let f(path: string) = 
                 TensorProto.Parser.ParseFrom(File.ReadAllBytes(path))
             [| for i in [0;1;2] ->
@@ -93,7 +92,7 @@ module FullModel =
 
     let testModel(model : byte[]) = 
         use sess = new InferenceSession(model)
-        for (index,(input,output)) in test_data.Force() |> Array.indexed do
+        for (index,(input,output)) in test_data |> Array.indexed do
             use values2 = sess.Run([|NamedOnnxValue.CreateFromTensor("Input3",Tensor.FromTensorProtoFloat32(input))|])
             let diff = 
                 (values2 |> Seq.toArray |> Array.head |> fun v -> v.AsTensor<float32>() |> Seq.toArray, Tensor.FromTensorProtoFloat32(output) |> Seq.toArray)
@@ -104,8 +103,8 @@ module FullModel =
 
     [<Test>]
     let ``prebuilt model``() = 
-        File.ReadAllBytes(Path.Combine(mnistDir, "model.onnx"))
-        |> testModel
+        let model = File.ReadAllBytes(Path.Combine(mnistDir, "model.onnx")) 
+        model |> testModel
 
 
     /// This is a full MNist example that exactly matches the pre-trained model
@@ -207,6 +206,7 @@ module FullModel =
         mpData |> testModel
 
 
+    /// NOTE: This is roughly 14x slower with the API overhead
     [<Test>]
     let ``eager mnist``() = 
         let getTensorF(name,shape) =
@@ -226,7 +226,7 @@ module FullModel =
 
         let test_data = 
             let f (x: TensorProto) = x.RawData.ToByteArray() |> X.bytesToFloats 
-            test_data.Force() |> Array.map (fun (x,y) -> (f x).ToTensor().Reshape([|1;1;28;28|]), f y)
+            test_data |> Array.map (fun (x,y) -> (f x).ToTensor().Reshape([|1;1;28;28|]), f y)
 
         for (index,(x,y1)) in Array.indexed(test_data) do
             let y2 = mnist x
