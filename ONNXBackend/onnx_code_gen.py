@@ -2,9 +2,6 @@
 # NOTE: This is only API code generation, quotations transforms will need some other object model
 
 # TODO handle AttrType.TENSOR and AttrType.SPARSE_TENSOR for 'Constant' nodes
-# TODO variadic outputs
-# TODO handle seq, map, tensor
-# TODO special case SequenceAt
 # TODO code gen documentation
 # TODO consider returning anonomous types
 
@@ -55,6 +52,7 @@ todo_schemas = (['ConstantOfShape','Constant'] + # Attribute TENSOR or SPARSE_TE
                 ['DictVectorizer', 'ZipMap', 'CastMap'] + #maps [x.name for x in schemas if hasType("map",x)]
                 ['If', 'Scan', 'Loop', ] + # GRAPH Attribute # Loop has Combined Optional and Variadic inputs
                 ['Split'] + # variadic output
+                ['OneHot'] + # remove OneHot for now, will spcial case it later
                 ['Cast'] + #Done 'to' attribute
                 ['SequenceEmpty', 'EyeLike', 'Multinomial', 'RandomUniformLike', 'RandomNormalLike', 'RandomNormal', 'RandomUniform'] + # Done 'dtype' in the attributes
                 ['TreeEnsembleClassifier', 'LSTM', 'LinearClassifier', 'SVMClassifier', 'MaxPool', 'GRU', 'TopK', 'Dropout', 'Unique', 'DynamicQuantizeLinear', 'RNN', 'BatchNormalization'] + # Done multi-outputs [x for x in schemas if (x.max_output != 1 or x.min_output != 1)]
@@ -144,20 +142,20 @@ def print_schema(x):
 def mapONNXToFSharp(name):
     mapping = {
         "tensor(uint8)" :"uint8", 
-        "tensor(uint16)" :None,
-        "tensor(uint32)" : None,
-        "tensor(uint64)" : None,
+        "tensor(uint16)" :"uint16",
+        "tensor(uint32)" : "uint32",
+        "tensor(uint64)" : "uint64",
         "tensor(int8)" : "int8",
-        "tensor(int16)" : None,
+        "tensor(int16)" : "int16",
         "tensor(int32)" : "int",
         "tensor(int64)" : "int64",
         "tensor(float16)" : None,
         "tensor(float)" : "float32",
-        "tensor(double)" : None, #"float", #limiting it for now
+        "tensor(double)" : "double", #"float", #limiting it for now
         "tensor(string)" : "string",
         "tensor(bool)" : "bool",
         "tensor(complex64)" : None,
-        "tensor(complex128)" : None,
+        "tensor(complex128)" : "Complex",
     }
     return mapping.get(name)
 
@@ -285,6 +283,7 @@ fo = open("/mnt/c/EE/Git/ONNXBackend/ONNXBackend/ONNXAPI.g.fs","w")
 fo.write("module ONNXAPI\n")
 fo.write("\n")
 fo.write("open System\n")
+fo.write("open System.Numerics\n")
 fo.write("open System.IO\n")
 fo.write("open System.Text\n")
 fo.write("open Onnx\n")

@@ -5,10 +5,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="Scratch.fsx" />
+    <Compile Include="Common.fs" />
     <Compile Include="Transformer.fs" />
+    <None Include="ONNXScratch.fsx" />
+    <None Include="QuotationScratch.fsx" />
   </ItemGroup>
 
-  <ItemGroup />
+  <ItemGroup>
+    <PackageReference Include="Falanx.Machinery" Version="0.5.2" />
+    <PackageReference Include="FParsec" Version="1.1.1" />
+    <PackageReference Include="FSharp.Quotations.Evaluator" Version="2.1.0" />
+  </ItemGroup>
 
 </Project>

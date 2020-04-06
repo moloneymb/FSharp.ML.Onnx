@@ -12,7 +12,6 @@
     <None Include="SetupNotes.md" />
     <None Include="CodeGen.fsx" />
     <Compile Include="ProtoBuf.fs" />
-    <None Include="Scratch.fsx" />
     <Compile Include="ONNXAPI.g.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

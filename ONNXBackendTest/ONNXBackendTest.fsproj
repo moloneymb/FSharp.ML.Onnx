@@ -12,7 +12,10 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
 
+  <ItemGroup />
+
   <ItemGroup>
+    <PackageReference Include="FParsec" Version="1.1.1" />
     <PackageReference Include="Google.Protobuf" Version="3.11.4" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.1.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.2.0" />
