@@ -10,6 +10,19 @@ from onnx import defs
 from onnx import AttributeProto
 from onnx.defs import OpSchema, ONNX_DOMAIN, ONNX_ML_DOMAIN
 from collections import defaultdict
+import re
+
+fsharp_keywords = set ([
+    "abstract", "as", "base", "begin", "class", "default", "delegate", "do", "done", "downcast", "downto", "elif",
+    "else", "end", "exception", "extern", "false", "finally", "fixed", "for", "fun", "function", "global", "if", "in",
+    "inherit", "inline", "interface", "internal", "lazy", "let", "let!", "match", "match!", "member", "module", "mutable",
+    "namespace", "new", "not", "null", "of", "open", "or", "override", "private", "public", "rec", "return", "return!",
+    "select", "static", "struct", "then", "to", "true", "try", "type", "upcast", "use", "use!", "val", "void", "when",
+    "while", "with", "yield", "yield!", "mod", "and"])
+
+def pascal_to_underscore(name):
+    underscore_name = re.sub(r'(?!^)([A-Z])([a-z])', r'_\1\2', name).lower()
+    return underscore_name + "_" if underscore_name in fsharp_keywords else underscore_name
 
 def countby(f, seq):
     d = defaultdict(int)
@@ -228,8 +241,8 @@ def mapDefaultValue(default_value):
 def partition(f,xs):
     return ([x for x in xs if f(x)],[x for x in xs if not f(x)])
 
-for (x,count) in countby(lambda x: x, ["(%i,%i) -> (%i,%i)" % (x.min_input, x.max_input, x.min_output, x.max_output) for x in schemas]).items():
-    print(f'{count}: {x}')
+#for (x,count) in countby(lambda x: x, ["(%i,%i) -> (%i,%i)" % (x.min_input, x.max_input, x.min_output, x.max_output) for x in schemas]).items():
+#    print(f'{count}: {x}')
 
 def filterAttrType(t):
     def f(x):
@@ -303,7 +316,7 @@ def code_gen_single_output(fo,schema,typeMap,outputTypes):
     (req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs) = get_part_inputs_and_attrs(schema)
     opt_attrs = [x for x in opt_attrs if not ("Pool" in schema.name and x.name == "ceil_mode")] # Should figure out how
     params = get_params(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
-    fo.write(f'    static member {schema.name}({params}) =')
+    fo.write(f'    static member {pascal_to_underscore(schema.name)}({params}) =')
     attrProto = "; ".join([f'Attr.{mapAttrFunction(attr)}("{attr.name}", {attr.name}{mapDefaultValue(attr.default_value)})' for attr in (req_attrs + opt_attrs)])
     inputs = ""
     def wrapTensor(x):
@@ -378,7 +391,7 @@ for schemaName in ['SequenceEmpty', 'EyeLike', 'Multinomial', 'RandomUniformLike
             req_attrs = [x for x in req_attrs if x.name != 'dtype' and x.name != 'to']
             opt_attrs = [x for x in opt_attrs if x.name != 'dtype' and x.name != 'to']
             params = get_params(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
-            fo.write(f'    static member {schema.name}{gen1}({params}) =')
+            fo.write(f'    static member {pascal_to_underscore(schema.name)}{gen1}({params}) =')
             attrProto = "; ".join([f'Attr.{mapAttrFunction(attr)}("{attr.name}", {attr.name}{mapDefaultValue(attr.default_value)})' for attr in (req_attrs + opt_attrs)])
             # NOTE We're assuming inputs are matched structually by order
             inputs = '[|' + '; '.join([f'MV.mv(1,{x.name})' for x in req_inputs]) + '|]'
@@ -400,11 +413,114 @@ fo.flush()
 fo.close()
 
 
+
+
+fo = open("/mnt/c/EE/Git/ONNXBackend/ONNXBackend/ONNXAPIGraph.g.fs","w")
+fo.write("module ONNXAPIGraph\n")
+fo.write("\n")
+fo.write("open System\n")
+fo.write("open System.Numerics\n")
+fo.write("open System.IO\n")
+fo.write("open System.Text\n")
+fo.write("open Onnx\n")
+fo.write("open Google.Protobuf.Collections\n")
+fo.write("open Microsoft.ML.OnnxRuntime.Tensors\n")
+fo.write("open Microsoft.ML.OnnxRuntime\n")
+fo.write("open ProtoBuf\n")
+fo.write("\n")
+fo.write("type ONNXGraph() =\n")
+
+
+schemas_out = []
+
+def inputParamStringGraph(x,typeMap):
+    #t = f'Tensor<{typeMap(x.typeStr) if typeMap(x.typeStr) is not None else mapONNXToFSharp(x.typeStr)}>' 
+    t = 'ValueInfo'
+    if x.option == FormalParameterOption.Single: return f'{x.name}: {t}'
+    elif x.option == FormalParameterOption.Optional: return f'?{x.name}: {t}'
+    elif  x.option == FormalParameterOption.Variadic: return f'[<ParamArray>]{x.name}: {t}[]'
+    else: raise Exception("shouldn't happen")
+
+def get_params_graph(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap):
+    params = ", ".join(
+        [inputParamStringGraph(x, typeMap) for x in req_inputs] + 
+        [f'{x.name}: {mapAttrType(x)}' for x in req_attrs] + 
+        [inputParamStringGraph(x, typeMap) for x in var_inputs] +
+        [inputParamStringGraph(x, typeMap) for x in opt_inputs] + 
+        [f'?{x.name}: {mapAttrType(x)}' for x in opt_attrs])
+    return params
+
+def code_gen_single_output_graph(fo,schema,typeMap,outputTypes):
+    (req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs) = get_part_inputs_and_attrs(schema)
+    opt_attrs = [x for x in opt_attrs if not ("Pool" in schema.name and x.name == "ceil_mode")] # Should figure out how
+    params = get_params_graph(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
+    fo.write(f'    static member {pascal_to_underscore(schema.name)}(graph: Graph, {params}) =')
+    attrProto = "; ".join([f'Attr.{mapAttrFunction(attr)}("{attr.name}", {attr.name}{mapDefaultValue(attr.default_value)})' for attr in (req_attrs + opt_attrs)])
+    inputs = ""
+    # NOTE We're assuming inputs are matched structually by order
+    if len(opt_inputs) == 0 and len(var_inputs) == 0: #only req_inputs
+        inputs = '[|' + '; '.join([x.name for x in req_inputs]) + '|]'
+    elif len(opt_inputs) != 0 and len(var_inputs) == 0:
+        inputs = '([|' + '; '.join([f'Some({x.name})' for x in req_inputs] + [x.name for x in opt_inputs]) + '|] |> Array.choose id)'
+    elif len(opt_inputs) == 0 and len(var_inputs) != 0:
+        if len(req_inputs) == 0: inputs = f'({var_inputs[0].name})'
+        else: inputs = '([|' + '; '.join([f'yield {x.name}' for x in req_inputs] + [f'yield! {x.name}' for x in var_inputs]) + '|])'
+    elif len(opt_inputs) != 0 and len(var_inputs) != 0:
+        raise Exception("ops with both optional and variadic inputs are not yet supported")
+    else:
+        raise Exception("shouldn't happen")
+    #    if len(opt_inputs) == 0 and len(var_inputs) == 0: #only req_inputs
+    #        inputs = '[|' + '; '.join([f'Some({x.name})' for x in req_inputs]) + '|]'
+    #    elif len(opt_inputs) != 0 and len(var_inputs) == 0:
+    #        inputs = '([|' + '; '.join([f'Some({x.name})' for x in req_inputs] + [x.name for x in opt_inputs]) + '|] )'
+    #    elif len(opt_inputs) == 0 and len(var_inputs) != 0:
+    #        if len(req_inputs) == 0: inputs = f'({var_inputs[0].name})'
+    #        else: inputs = '([|' + '; '.join([f'yield {x.name}' for x in req_inputs] + [f'yield! {x.name}' for x in var_inputs]) + '|])'
+    #    elif len(opt_inputs) != 0 and len(var_inputs) != 0:
+    #        raise Exception("ops with both optional and variadic inputs are not yet supported")
+    #    else:
+    #        raise Exception("shouldn't happen")
+    if isinstance(outputTypes,list):
+        outputs = ", ".join(outputTypes)
+        # TODO figure out outputs
+        print(outputTypes)
+        #fo.write(f'\n        MV() |> fun mv -> execNodeTuple{len(outputTypes)}<{outputs}> "{schema.name}" {inputs} {optionalChoose(attrProto)}\n')
+        fo.write(f'\n        graph.AddNode("{schema.name}", {inputs}, {outputs}, [|{attrProto}|]).[0]\n')
+    else:
+        fo.write(f'\n        graph.AddNode("{schema.name}", {inputs}, [||], [|{attrProto}|]).[0]\n')
+        #fo.write(f'\n        MV() |> fun mv -> execNode<{outputTypes}> "{schema.name}" {inputs} {optionalChoose(attrProto)}\n')
+
+
+# single type constraints
+#for schema in so_single_type:
+#schema = so_single_type[0]
+
+#    print(f'{schema.name}')
+#    schemas_out.append(schema.name)
+
+#choseFSharpTypes(schema.type_constraints[0])
+
+#    for t in choseFSharpTypes(schema.type_constraints[0]):
+#        code_gen_single_output(fo,schema,(lambda x: t if mapONNXToFSharp(x) is None else mapONNXToFSharp(x)),t)
+# single type constraints
+
+for schema in so_single_type:
+    print(f'{schema.name}')
+    schemas_out.append(schema.name)
+    code_gen_single_output_graph(fo,schema,(lambda x: "never"),t)
+
+fo.flush()
+fo.close()
+
+schema = so_single_output_type[0]
+
+#print_schema(schema)
+
 # All optional to be treated as required, unused will be filtered out later
 
-(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs) = get_part_inputs_and_attrs(schema)
+#(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs) = get_part_inputs_and_attrs(schema)
 
-dir(schema)
+#dir(schema)
 #(getSchema('QuantizeLinear').inputs[0]).typeStr
 #andir(getSchema('QuantizeLinear').inputs[1])
 #dir(getSchema('QuantizeLinear').inputs[1])

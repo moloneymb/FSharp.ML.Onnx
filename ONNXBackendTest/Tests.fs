@@ -12,7 +12,7 @@ type on = ONNXAPI.ONNX
 [<AutoOpen>]
 module X = 
     type ONNXAPI.ONNX with
-        static member Reshape(x: Tensor<float32>,shape: int32[]) = on.Reshape(x,(shape |> Array.map int64).ToTensor())
+        static member reshape(x: Tensor<float32>,shape: int32[]) = on.reshape(x,(shape |> Array.map int64).ToTensor())
 
 module MiniGraphs = 
     let input1 = ArrayTensorExtensions.ToTensor(Array2D.create 1 32 2.f) :> Tensor<float32>
@@ -27,8 +27,8 @@ module MiniGraphs =
 
     [<Test>]
     let ``add float``() = 
-        let res1 = on.Add(input1,input2)
-        let res2 = on.Add(input1Int,input2Int)
+        let res1 = on.add(input1,input2)
+        let res2 = on.add(input1Int,input2Int)
         if res1.Dimensions.ToArray() <> [|32;32|] then failwith "Incorrect dimmesions"
         if res1 |> Seq.exists (fun x -> x <> 5.f) then failwith "An incorrect value"
         if res2.Dimensions.ToArray() <> [|32;32|] then failwith "Incorrect dimmesions"
@@ -39,7 +39,7 @@ module MiniGraphs =
         let xx = Array2D.create 2 2 0.f
         xx.[0,0] <- -1.0f
         xx.[1,1] <- 1.0f
-        let res = on.Relu(ArrayTensorExtensions.ToTensor(xx) :> Tensor<float32>)
+        let res = on.relu(ArrayTensorExtensions.ToTensor(xx) :> Tensor<float32>)
         Assert.AreEqual(0.0, float res.[0,0], 0.001)
         Assert.AreEqual(1.0, float res.[1,1], 0.001)
 
@@ -47,22 +47,22 @@ module MiniGraphs =
     let convolution() = 
         let img = ArrayTensorExtensions.ToTensor(Array4D.create 1 1 32 32 1.f) :> Tensor<float32>
         let kernel = ArrayTensorExtensions.ToTensor(Array4D.create 8 1 5 5 1.f) :> Tensor<float32>
-        let convRes = on.Conv(img, kernel, auto_pad= "SAME_UPPER")
+        let convRes = on.conv(img, kernel, auto_pad= "SAME_UPPER")
         Assert.AreEqual(9.0, float convRes.[0,0,0,0], 0.001)
         Assert.AreEqual(25.0, float convRes.[0,0,5,5], 0.001)
 
     [<Test>]
     let ``matmul broadcast``() = 
-        let res1 = on.MatMul(input1,input2)
+        let res1 = on.mat_mul(input1,input2)
         Assert.AreEqual([|1;1|], res1.shape)
         Assert.AreEqual(192.0f, res1.[0])
-        let res2 = on.MatMul(input2,input1)
+        let res2 = on.mat_mul(input2,input1)
         Assert.AreEqual([|32;32|], res2.shape)
         Assert.AreEqual(6.0f, res2.[0])
 
     [<Test>]
     let ``matmul batch``() = 
-        let res1 = on.MatMul(input4D1,input4D2)
+        let res1 = on.mat_mul(input4D1,input4D2)
         Assert.AreEqual([|3;3;1;1|], res1.Dimensions.ToArray())
         Assert.AreEqual(6.0f, res1.[0])
 
@@ -70,7 +70,7 @@ module MiniGraphs =
     let ``eager api``() =
         let input1 = ArrayTensorExtensions.ToTensor(Array2D.create 10000 40 -2.f) :> Tensor<float32>
         let input2 = ArrayTensorExtensions.ToTensor(Array2D.create 40 10000 -2.f) :> Tensor<float32>
-        let res = on.MatMul(input2,on.Abs(input1))
+        let res = on.mat_mul(input2,on.abs(input1))
         Assert.AreEqual([|40;40|], res.shape)
         Assert.AreEqual(-40000., float res.[0,0], 0.00001)
         
@@ -106,6 +106,62 @@ module FullModel =
         let model = File.ReadAllBytes(Path.Combine(mnistDir, "model.onnx")) 
         model |> testModel
 
+    [<AutoOpen>]
+    module Node = 
+
+        let unaryOp op (attrs: AttributeProto[]) (name: string, input: string, output: string)  =
+            simple op (name, [|input|],[|output|],attrs)
+
+        let binaryOp op (attrs: AttributeProto[]) (name: string, left: string, right: string, output: string)  =
+            simple op (name, [|left;right|],[|output|],attrs)
+
+        let reshape = binaryOp "Reshape" [||]
+        let add = binaryOp "Add" [||]
+
+        let cnn(name: string, 
+                input: string, 
+                kernel: string, 
+                output: string, 
+                kernel_shape: int64[], 
+                strides: int64[], 
+                auto_pad: string , 
+                group: int64,
+                dilations: int64[]) = 
+
+            let attrs = 
+                [|
+                    Attr.ints("kernel_shape", kernel_shape)// [|5L;5L|]
+                    Attr.ints("strides", strides) // [|1L;1L|]
+                    Attr.string("auto_pad", auto_pad) //"SAME_UPPER"
+                    Attr.int("group",group) // 1L
+                    Attr.ints("dilations",dilations) //[|1L;1L|]
+                |] |> Array.choose id
+
+            let np = simple "Conv" (name, [|input;kernel|],[|output|],attrs)
+            np
+
+        let pool opType
+                   (name: string, 
+                    input: string, 
+                    output: string, 
+                    kernel_shape: int64[], 
+                    strides: int64[], 
+                    pads: int64[], 
+                    auto_pad : string) = 
+
+            let attrs = 
+                [|
+                    Attr.ints("kernel_shape",kernel_shape)
+                    Attr.ints("strides",strides)
+                    Attr.ints("pads",pads)
+                    Attr.string("auto_pad",auto_pad)
+                |] |> Array.choose id
+            let np = simple opType (name, [|input|],[|output|],attrs)
+            np
+
+        let maxPool = pool "MaxPool"
+        let relu(name: string, input: string, output: string) = unaryOp "Relu" [||] (name, input,output)
+        let matmul = binaryOp "MatMul"  [||]
 
     /// This is a full MNist example that exactly matches the pre-trained model
     [<Test>]
@@ -211,7 +267,7 @@ module FullModel =
     let ``eager mnist``() = 
         let getTensorF(name,shape) =
             let dts = File.ReadAllBytes(Path.Combine(mnistDir, name)) |> bytesToFloats
-            on.Reshape(ArrayTensorExtensions.ToTensor(dts) ,ArrayTensorExtensions.ToTensor(shape))
+            on.reshape(ArrayTensorExtensions.ToTensor(dts) ,ArrayTensorExtensions.ToTensor(shape))
 
         let p193 = getTensorF("Parameter193", [|16L; 4L; 4L; 10L|])
         let p87  = getTensorF("Parameter87",  [|16L; 8L; 5L; 5L|])
@@ -220,18 +276,103 @@ module FullModel =
         let p88  = getTensorF("Parameter88", [|16L; 1L; 1L|])
         let p194 = getTensorF("Parameter194", [|1L; 10L|]) 
 
-        let mnist x = 
-            let f x p1 p2 k = on.MaxPool(on.Relu(on.Add(on.Conv(x,p1,auto_pad = "SAME_UPPER"),p2)),kernel_shape = [|k;k|], strides = [|k;k|]) |> fst
-            on.Add(on.MatMul(on.Reshape((f (f x p5 p6 2L) p87 p88 3L),[|1;256|]),on.Reshape(p193,[|256;10|])),p194)
+        let mnist (x:Tensor<float32>) = 
+            let f (x:Tensor<float32>) (p1:Tensor<float32>) (p2:Tensor<float32>) k = 
+                on.max_pool(on.relu(on.add(on.conv(x,p1,auto_pad = "SAME_UPPER"),p2)),kernel_shape = [|k;k|], strides = [|k;k|]) |> fst
+            on.add(on.mat_mul(on.reshape((f (f x p5 p6 2L) p87 p88 3L),[|1;256|]),on.reshape(p193,[|256;10|])),p194)
 
         let test_data = 
-            let f (x: TensorProto) = x.RawData.ToByteArray() |> X.bytesToFloats 
+            let f (x: TensorProto) = x.RawData.ToByteArray() |> bytesToFloats 
             test_data |> Array.map (fun (x,y) -> (f x).ToTensor().Reshape([|1;1;28;28|]), f y)
 
         for (index,(x,y1)) in Array.indexed(test_data) do
             let y2 = mnist x
             let diff = (y2.ToArray(),y1) ||> Array.zip |> Array.sumBy (fun (x,y) -> System.Math.Abs(x-y))
             if diff > 0.1f then failwithf "Unexpected result in example %i with a difference of %f" index diff
+
+
+    type ONNXGraph() = 
+
+        static member constant(graph: Graph, t: Tensor<float32>) : ValueInfo =
+            graph.AddNode("Constant", [||], [|DataType.FLOAT32|],[|Attr.tensor(t)|]).[0]
+
+        static member constant(graph: Graph, t: Tensor<double>) : ValueInfo =
+            graph.AddNode("Constant", [||], [|DataType.DOUBLE|],[|Attr.tensor(t)|]).[0]
+
+        static member constant(graph: Graph, t: Tensor<int32>) : ValueInfo =
+            graph.AddNode("Constant", [||], [|DataType.INT32|],[|Attr.tensor(t)|]).[0]
+
+        static member constant(graph: Graph, t: Tensor<int64>) : ValueInfo =
+            graph.AddNode("Constant", [||], [|DataType.INT64|],[|Attr.tensor(t)|]).[0]
+
+        static member abs(graph: Graph, x: ValueInfo) : ValueInfo = 
+            graph.AddNode("Abs", [|x|], [|x.dt|],[||]).[0]
+
+        static member conv(graph: Graph, X: ValueInfo, W: ValueInfo, ?B: ValueInfo, ?auto_pad: string, ?dilations: int64[], ?group: int64, ?kernel_shape: int64[], ?pads: int64[], ?strides: int64[]) =
+            graph.AddNode("Conv", [|Some(X);Some(W);B|] |> Array.choose id, [|X.dt|], [|Attr.string("auto_pad", auto_pad, "NOTSET"); Attr.ints("dilations", dilations); Attr.int("group", group, 1L); Attr.ints("kernel_shape", kernel_shape); Attr.ints("pads", pads); Attr.ints("strides", strides)|]).[0] // For a single one
+
+        static member relu(graph : Graph, A: ValueInfo) : ValueInfo =
+            graph.AddNode("Relu",[|A|],[|A.dt|],[||]).[0]
+
+        static member add(graph : Graph, A: ValueInfo, B: ValueInfo) : ValueInfo =
+            graph.AddNode("Add",[|A; B|],[|A.dt|],[||]).[0]
+
+        static member reshape(graph: Graph, data: ValueInfo, shape: ValueInfo) =
+            graph.AddNode("Reshape",[|data; shape|],[|data.dt|],[||]).[0]
+
+        static member max_pool(graph: Graph, X: ValueInfo, kernel_shape: int64[], ?auto_pad: string, ?dilations: int64[], ?pads: int64[], ?storage_order: int64, ?strides: int64[]) =
+            graph.AddNode("MaxPool", [|X|],[|X.dt;DataType.INT32|], [|Attr.ints("kernel_shape", kernel_shape); Attr.string("auto_pad", auto_pad, "NOTSET"); Attr.ints("dilations", dilations); Attr.ints("pads", pads); Attr.int("storage_order", storage_order, 0L); Attr.ints("strides", strides)|]) |> fun xs -> (xs.[0],xs.[1])
+
+        static member mat_mul(graph: Graph, A: ValueInfo, B: ValueInfo) =
+            graph.AddNode("MatMul", [|A;B|],[|A.dt|],[||]).[0]
+
+    type ong = ONNXGraph
+
+    type MNISTGraph() = 
+
+        let bytesToFloats(buffer : byte[]) = 
+            let xs= Array.zeroCreate<float32> (buffer.Length / 4)
+            System.Buffer.BlockCopy(buffer, 0, xs, 0, buffer.Length)
+            xs
+
+        let getTensorF(name,shape) =
+            let dts = File.ReadAllBytes(Path.Combine(mnistDir, name)) |> bytesToFloats
+            on.reshape(ArrayTensorExtensions.ToTensor(dts) ,ArrayTensorExtensions.ToTensor(shape))
+
+        let p193 = getTensorF("Parameter193", [|16L; 4L; 4L; 10L|])
+        let p87  = getTensorF("Parameter87",  [|16L; 8L; 5L; 5L|])
+        let p5   = getTensorF("Parameter5",  [|8L; 1L; 5L; 5L|])
+        let p6   = getTensorF("Parameter6", [|8L; 1L; 1L|])
+        let p88  = getTensorF("Parameter88", [|16L; 1L; 1L|])
+        let p194 = getTensorF("Parameter194", [|1L; 10L|]) 
+
+        [<ReflectedDefinition>]
+        member this.Rec(graph:Graph, x:ValueInfo,p1,p2,k) = 
+           ong.max_pool(graph,ong.relu(graph,ong.add(graph,ong.conv(graph,x,p1,auto_pad = "SAME_UPPER"),p2)),kernel_shape = [|k;k|], strides = [|k;k|]) |> fst
+
+        [<ReflectedDefinition>]
+        member this.Forward(graph: Graph, x: ValueInfo) = 
+            let constant (x:Tensor<float32>) = ong.constant(graph,x)
+            ong.add(graph, ong.mat_mul(graph, ong.reshape(graph, (this.Rec (graph, this.Rec(graph, x,constant p5,constant p6,2L),constant p87,constant p88,3L)),ong.constant(graph,[|1L;256L|].ToTensor())),ong.reshape(graph,constant p193,ong.constant(graph,[|256L;10L|].ToTensor()))),constant p194)
+
+    [<Test>]
+    let ``full mnist``() = 
+
+        let mnistG = MNISTGraph()
+        let makeValueInfoProto(valueInfo: ValueInfo) = 
+            ValueInfoProto(Name = valueInfo.name, Type = 
+                TypeProto(TensorType = TypeProto.Types.Tensor(ElemType = int32 valueInfo.dt)))
+
+        let input = {name = "Input3";dt=DataType.FLOAT32}
+        let graph = Graph.Default()
+        let output = mnistG.Forward(graph,input)
+
+        let gp = GraphProto(Name = "G")
+        gp.Input.Add(makeValueInfoProto(input))
+        gp.Output.Add(makeValueInfoProto(output))
+        gp.Node.Add(graph.ops)
+        testModel(writeModelToStream(gp |> graphToModel))
+
 
 module ONNXExample = 
     [<Test>]

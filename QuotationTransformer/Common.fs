@@ -1,11 +1,15 @@
 ﻿module Common
 
+open System
+open System.Reflection
 open Fantomas
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.DerivedPatterns
 open Microsoft.FSharp.Quotations.ExprShape
 open Microsoft.FSharp.Quotations.Patterns
 open System.Text.RegularExpressions
+
+let (|TryFunc|_|) (f: 'a -> 'b option ) (x:'a) = f x
 
 let private regexs = [| Regex(@"Operators\.string\<[_A-Za-z0-9]*\>"), "string"; Regex(@"\(unitVar[0-9]* : Unit\)"), "()" |]
 
@@ -148,9 +152,53 @@ module ExprTransforms =
 //            Some(Expr.Applications(rd,zs |> List.reshape [for ys in yss -> ys.Length] |> List.map (List.filter (fun z -> z.Type <> typeof<unit>))))
 //        | _ -> None
 
-    let expandWithReflectedDefinition = 
+//match <@ (|>) @> |> Expr.tryFirstCall |> Option.get with
+////| SpecificCall <@ (|>) @> (None,_,[arg;func]) -> Some(Expr.Application(func,arg))
+//| SpecificCall <@ (|>) @> (None,_,[arg;func]) -> Some(<@@ (%%func) %%arg @@>)
+//| _ -> failwith "todo"
+//|> Option.get
+
+
+//let pipeCalls = function
+//    | SpecificCall <@ (|>) @> (None,_,[arg;func]) 
+//    | SpecificCall <@ (<|) @> (None,_,[func;arg]) -> Some(Expr.Application(func,arg))
+//    | SpecificCall <@ (||>) @> (None,_,[arg1;arg2;func]) 
+//    | SpecificCall <@ (<||) @> (None,_,[func;arg1;arg2]) -> Some(Expr.Applications(func,[[arg1];[arg2]]))
+//    | SpecificCall <@ (|||>) @> (None,_,[arg1;arg2;arg3;func]) 
+//    //| SpecificCall <@ (<|||) @> (None,_,[func;arg1;arg2;arg3]) -> Some(<@@ (%%func) %%arg1 %%arg2 %%arg3 @@>) //Some(Expr.Applications(func,[[arg1];[arg2];[arg3]]))
+//    | SpecificCall <@ (<|||) @> (None,_,[func;arg1;arg2;arg3]) -> Some(<@@ (%%func) %%arg1 %%arg2 %%arg3 @@>) //Some(Expr.Applications(func,[[arg1];[arg2];[arg3]]))
+//    | _ -> None
+
+//    let expand  (f: MethodInfo -> Expr option) (g: PropertyInfo -> Expr option) (expr: Expr)=
+//        match expr with
+//        | PropertyGet(instanceO,TryFunc g (Lambdas(yss,_) as rd),zs) 
+//        //| Call(None, TryFunc f (Lambdas (yss,_) as rd), zs) 
+//        | Patterns.Call(instanceO, TryFunc f (Lambdas(yss,_) as rd), zs) ->
+//            // Reshape will stop short of filling new 'shape' when there are not enough elements
+//            // This happens when Lambdas pattern matches with more Lambdas than there are Call parameters 
+//            // This is because there is no early stopping on the Lambdas pattern
+//            let reshape  (shape: int list) (xs: 'a list) : 'a list list =
+//                (([],xs),shape) ||> List.fold (fun (acc,xs) count -> 
+//                    if xs.Length = 0 then (acc,[])
+//                    elif xs.Length < count then (xs::acc,[])
+//                    else List.chop count  xs |> fun (head,xs) -> (head::acc,xs))
+//                |> fst |> List.rev
+//            match instanceO,zs,yss with
+//            // special case single unit parameters which are empty
+//            | None,[], [y]::_ when y.Type = typeof<unit> -> Expr.Applications(rd,[[]])
+//            | Some(instance),[], [x]::[y]::_ when instance.Type = x.Type && y.Type = typeof<unit> -> Expr.Applications(rd,[[instance];[]])
+//            | None,[], _ -> failwithf "found an unexpected value %A" rd
+//            | Some(instance),_,(_::yss) -> Expr.Applications(rd,[instance] :: (zs |> reshape [for ys in yss -> ys.Length]))
+//            | None,_,_ -> Expr.Applications(rd,zs |> reshape [for ys in yss -> ys.Length])
+//            | _,_,_ -> failwithf "found an unexpected value %A " rd
+//            |> Some
+//        | _ -> None
+
+//    let expandWithReflectedDefinition (expr: Expr) = expr |> expand (``|MethodWithReflectedDefinition|_|``) (``|PropertyGetterWithReflectedDefinition|_|``)
+    let expandWithReflectedDefinition  = //|MethodWithReflectedDefinition|_|PropertyGetterWithReflectedDefinition|_|``)
         function
         | PropertyGet(instanceO,PropertyGetterWithReflectedDefinition (Lambdas(yss,_) as rd),zs) 
+        //| Call(None, TryFunc f (Lambdas (yss,_) as rd), zs) 
         | Patterns.Call(instanceO, MethodWithReflectedDefinition (Lambdas(yss,_) as rd), zs) ->
             // Reshape will stop short of filling new 'shape' when there are not enough elements
             // This happens when Lambdas pattern matches with more Lambdas than there are Call parameters 
@@ -171,6 +219,10 @@ module ExprTransforms =
             | _,_,_ -> failwithf "found an unexpected value %A " rd
             |> Some
         | _ -> None
+
+//        | PropertyGet(instanceO,PropertyGetterWithReflectedDefinition (Lambdas(yss,_) as rd),zs) 
+//        //| Call(None, TryFunc f (Lambdas (yss,_) as rd), zs) 
+//        | Patterns.Call(instanceO, MethodWithReflectedDefinition (Lambdas(yss,_) as rd), zs) ->
 
     /// This simplifies applying exprs into lambdas vars where vars are either not used or only used once
     /// TODO / WARN we're removing unit applications which will cause issues when there is side-effectful code

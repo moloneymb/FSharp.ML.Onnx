@@ -7,6 +7,15 @@ open Google.Protobuf.Collections
 open Microsoft.ML.OnnxRuntime.Tensors
 open Microsoft.ML.OnnxRuntime
 
+
+type 'a``[]`` with
+    member x.ToTensor() = ArrayTensorExtensions.ToTensor(x)
+
+type Tensor<'a> with
+    member this.ToArray() = this.ToDenseTensor().Buffer.ToArray()
+    member this.shape = this.Dimensions.ToArray()
+    member x.Reshape(shape:int[]) = x.Reshape(System.ReadOnlyMemory.op_Implicit(shape).Span)
+
 type RepeatedField<'a> with
     static member FromArray(xs : 'a[]) =
         let v = RepeatedField<'a>()
@@ -15,13 +24,6 @@ type RepeatedField<'a> with
 
 module RepeatedField =
     let Empty<'a>  = RepeatedField<'a>()
-
-type Tensor<'a> with
-    member this.ToArray() = 
-        this.ToDenseTensor().Buffer.ToArray()
-
-    member this.shape = this.Dimensions.ToArray()
-
 
 let makeShape(xs : int64[]) = 
     let shape = TensorShapeProto()
@@ -99,6 +101,12 @@ type Attr() =
         t.FloatData.AddRange(x.ToArray())
         Some(AttributeProto(Type = AttributeProto.Types.AttributeType.Tensor, T = t))
 
+    static member tensor(x: Tensor<double>) : AttributeProto option = 
+        let t = TensorProto(DataType = int DataType.FLOAT32)
+        t.Dims.AddRange(x.Dimensions.ToArray() |> Array.map int64)
+        t.DoubleData.AddRange(x.ToArray())
+        Some(AttributeProto(Type = AttributeProto.Types.AttributeType.Tensor, T = t))
+
     static member tensor(x: Tensor<int32>) : AttributeProto option = 
         let t = TensorProto(DataType = int DataType.INT32)
         t.Dims.AddRange(x.Dimensions.ToArray() |> Array.map int64)
@@ -111,108 +119,43 @@ type Attr() =
         t.Int64Data.AddRange(x.ToArray())
         Some(AttributeProto(Type = AttributeProto.Types.AttributeType.Tensor, T = t))
 
-[<AutoOpen>]
-module X =
-    let floatsToBytes(xs : float32[]) = 
-        let buffer = Array.zeroCreate<byte> (xs.Length * 4)
-        System.Buffer.BlockCopy(xs, 0, buffer, 0, buffer.Length)
-        buffer
+let floatsToBytes(xs : float32[]) = 
+    let buffer = Array.zeroCreate<byte> (xs.Length * 4)
+    System.Buffer.BlockCopy(xs, 0, buffer, 0, buffer.Length)
+    buffer
 
-    let bytesToFloats(buffer : byte[]) = 
-        let xs= Array.zeroCreate<float32> (buffer.Length / 4)
-        System.Buffer.BlockCopy(buffer, 0, xs, 0, buffer.Length)
-        xs
+let bytesToFloats(buffer : byte[]) = 
+    let xs= Array.zeroCreate<float32> (buffer.Length / 4)
+    System.Buffer.BlockCopy(buffer, 0, xs, 0, buffer.Length)
+    xs
 
-    let intsToBytes(xs : int64[]) = 
-        let buffer = Array.zeroCreate<byte> (xs.Length * 8)
-        System.Buffer.BlockCopy(xs, 0, buffer, 0, buffer.Length)
-        buffer
+let intsToBytes(xs : int64[]) = 
+    let buffer = Array.zeroCreate<byte> (xs.Length * 8)
+    System.Buffer.BlockCopy(xs, 0, buffer, 0, buffer.Length)
+    buffer
 
-    let bytesToInts(buffer : byte[]) = 
-        let xs= Array.zeroCreate<int64> (buffer.Length / 8)
-        System.Buffer.BlockCopy(buffer, 0, xs, 0, buffer.Length)
-        xs
+let bytesToInts(buffer : byte[]) = 
+    let xs= Array.zeroCreate<int64> (buffer.Length / 8)
+    System.Buffer.BlockCopy(buffer, 0, xs, 0, buffer.Length)
+    xs
 
-    type Tensor with
-        static member FromTensorProtoFloat32(tp : TensorProto) = 
-            let dt = enum<DataType>(tp.DataType)
-            if dt <> DataType.FLOAT32 then failwith "unsupported tensor datatype at this time"
-            let dims = tp.Dims |> Seq.toArray |> Array.map int32
-            let data = 
-                if tp.RawData.Length > 0 then tp.RawData.ToByteArray() |> bytesToFloats
-                else tp.FloatData |> Seq.toArray
-            DenseTensor<float32>(System.Memory<float32>(data),System.ReadOnlySpan<int>(dims))
 
-type 'a``[]`` with
-    member x.ToTensor() = ArrayTensorExtensions.ToTensor(x)
+type Tensor with
+    static member FromTensorProtoFloat32(tp : TensorProto) = 
+        let dt = enum<DataType>(tp.DataType)
+        if dt <> DataType.FLOAT32 then failwith "unsupported tensor datatype at this time"
+        let dims = tp.Dims |> Seq.toArray |> Array.map int32
+        let data = 
+            if tp.RawData.Length > 0 then tp.RawData.ToByteArray() |> bytesToFloats
+            else tp.FloatData |> Seq.toArray
+        DenseTensor<float32>(System.Memory<float32>(data),System.ReadOnlySpan<int>(dims))
 
-type Tensor<'a> with
-    member x.Reshape(shape:int[]) = 
-        x.Reshape(System.ReadOnlyMemory.op_Implicit(shape).Span)
-
-[<AutoOpen>]
-module Node = 
-    let simple op (name: string, inputs: string[], outputs: string[], attributes: AttributeProto[]) = 
-        let np = NodeProto(OpType = op, Name = name)
-        np.Attribute.AddRange(attributes)
-        np.Input.AddRange(inputs)
-        np.Output.AddRange(outputs)
-        np
-
-    let unaryOp op (attrs: AttributeProto[]) (name: string, input: string, output: string)  =
-        simple op (name, [|input|],[|output|],attrs)
-
-    let binaryOp op (attrs: AttributeProto[]) (name: string, left: string, right: string, output: string)  =
-        simple op (name, [|left;right|],[|output|],attrs)
-
-    let reshape = binaryOp "Reshape" [||]
-    let add = binaryOp "Add" [||]
-
-    let cnn(name: string, 
-            input: string, 
-            kernel: string, 
-            output: string, 
-            kernel_shape: int64[], 
-            strides: int64[], 
-            auto_pad: string , 
-            group: int64,
-            dilations: int64[]) = 
-
-        let attrs = 
-            [|
-                Attr.ints("kernel_shape", kernel_shape)// [|5L;5L|]
-                Attr.ints("strides", strides) // [|1L;1L|]
-                Attr.string("auto_pad", auto_pad) //"SAME_UPPER"
-                Attr.int("group",group) // 1L
-                Attr.ints("dilations",dilations) //[|1L;1L|]
-            |] |> Array.choose id
-
-        let np = simple "Conv" (name, [|input;kernel|],[|output|],attrs)
-        np
-
-    let pool opType
-               (name: string, 
-                input: string, 
-                output: string, 
-                kernel_shape: int64[], 
-                strides: int64[], 
-                pads: int64[], 
-                auto_pad : string) = 
-
-        let attrs = 
-            [|
-                Attr.ints("kernel_shape",kernel_shape)
-                Attr.ints("strides",strides)
-                Attr.ints("pads",pads)
-                Attr.string("auto_pad",auto_pad)
-            |] |> Array.choose id
-        let np = simple opType (name, [|input|],[|output|],attrs)
-        np
-
-    let maxPool = pool "MaxPool"
-    let relu(name: string, input: string, output: string) = unaryOp "Relu" [||] (name, input,output)
-    let matmul = binaryOp "MatMul"  [||]
-
+let simple op (name: string, inputs: string[], outputs: string[], attributes: AttributeProto[]) = 
+    let np = NodeProto(OpType = op, Name = name)
+    np.Attribute.AddRange(attributes)
+    np.Input.AddRange(inputs)
+    np.Output.AddRange(outputs)
+    np
 
 let getDataType(t: System.Type) =
     match t.FullName with
@@ -341,4 +284,25 @@ let execNodeTuple5<'a,'b,'c,'d,'e> (opName: string) (inputs: (NamedOnnxValue*Val
                                        ress.[2].AsTensor<'c>().Clone(), 
                                        ress.[3].AsTensor<'c>().Clone(), 
                                        ress.[4].AsTensor<'e>().Clone())
+
+type ValueInfo = {name : string; dt : DataType}
+
+type Graph = 
+    { mutable ops : NodeProto list; mutable usedNames : Map<string,int> } 
+    static member Default() = {ops = []; usedNames = Map.empty}
+    member this.GetName(name : string) : string = 
+            let (x,y) = 
+                match this.usedNames.TryFind(name) with
+                | None -> name,this.usedNames.Add(name,0)
+                | Some(v) -> 
+                    let newName = name + string(v + 1)
+                    newName,this.usedNames.Add(name,v+1).Add(newName,0)
+            this.usedNames <- y
+            x
+
+    member this.AddNode(node: NodeProto) = this.ops <- node::this.ops
+    member this.AddNode(name: string, inputs: ValueInfo [], outputs: DataType[], attrs: AttributeProto option[]) =
+            let outputValueInfos = outputs |> Array.map (fun dt -> { name = this.GetName(sprintf "%s_Output" name); dt = dt})
+            this.AddNode(simple name (this.GetName(name), (inputs |> Array.map (fun x -> x.name)), (outputValueInfos |> Array.map (fun x -> x.name)), attrs |> Array.choose id))
+            outputValueInfos
 

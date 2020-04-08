@@ -5,6 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="CompilerComponent.fs" />
+    <Compile Include="ExpressionReplacer.fs" />
+    <None Include="Scratch.fsx" />
     <Compile Include="Common.fs" />
     <Compile Include="Transformer.fs" />
     <None Include="ONNXScratch.fsx" />
