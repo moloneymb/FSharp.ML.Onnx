@@ -290,43 +290,7 @@ module FullModel =
             let diff = (y2.ToArray(),y1) ||> Array.zip |> Array.sumBy (fun (x,y) -> System.Math.Abs(x-y))
             if diff > 0.1f then failwithf "Unexpected result in example %i with a difference of %f" index diff
 
-
-    type ONNXGraph() = 
-
-        static member constant(graph: Graph, t: Tensor<float32>) : ValueInfo =
-            graph.AddNode("Constant", [||], [|DataType.FLOAT32|],[|Attr.tensor(t)|]).[0]
-
-        static member constant(graph: Graph, t: Tensor<double>) : ValueInfo =
-            graph.AddNode("Constant", [||], [|DataType.DOUBLE|],[|Attr.tensor(t)|]).[0]
-
-        static member constant(graph: Graph, t: Tensor<int32>) : ValueInfo =
-            graph.AddNode("Constant", [||], [|DataType.INT32|],[|Attr.tensor(t)|]).[0]
-
-        static member constant(graph: Graph, t: Tensor<int64>) : ValueInfo =
-            graph.AddNode("Constant", [||], [|DataType.INT64|],[|Attr.tensor(t)|]).[0]
-
-        static member abs(graph: Graph, x: ValueInfo) : ValueInfo = 
-            graph.AddNode("Abs", [|x|], [|x.dt|],[||]).[0]
-
-        static member conv(graph: Graph, X: ValueInfo, W: ValueInfo, ?B: ValueInfo, ?auto_pad: string, ?dilations: int64[], ?group: int64, ?kernel_shape: int64[], ?pads: int64[], ?strides: int64[]) =
-            graph.AddNode("Conv", [|Some(X);Some(W);B|] |> Array.choose id, [|X.dt|], [|Attr.string("auto_pad", auto_pad, "NOTSET"); Attr.ints("dilations", dilations); Attr.int("group", group, 1L); Attr.ints("kernel_shape", kernel_shape); Attr.ints("pads", pads); Attr.ints("strides", strides)|]).[0] // For a single one
-
-        static member relu(graph : Graph, A: ValueInfo) : ValueInfo =
-            graph.AddNode("Relu",[|A|],[|A.dt|],[||]).[0]
-
-        static member add(graph : Graph, A: ValueInfo, B: ValueInfo) : ValueInfo =
-            graph.AddNode("Add",[|A; B|],[|A.dt|],[||]).[0]
-
-        static member reshape(graph: Graph, data: ValueInfo, shape: ValueInfo) =
-            graph.AddNode("Reshape",[|data; shape|],[|data.dt|],[||]).[0]
-
-        static member max_pool(graph: Graph, X: ValueInfo, kernel_shape: int64[], ?auto_pad: string, ?dilations: int64[], ?pads: int64[], ?storage_order: int64, ?strides: int64[]) =
-            graph.AddNode("MaxPool", [|X|],[|X.dt;DataType.INT32|], [|Attr.ints("kernel_shape", kernel_shape); Attr.string("auto_pad", auto_pad, "NOTSET"); Attr.ints("dilations", dilations); Attr.ints("pads", pads); Attr.int("storage_order", storage_order, 0L); Attr.ints("strides", strides)|]) |> fun xs -> (xs.[0],xs.[1])
-
-        static member mat_mul(graph: Graph, A: ValueInfo, B: ValueInfo) =
-            graph.AddNode("MatMul", [|A;B|],[|A.dt|],[||]).[0]
-
-    type ong = ONNXGraph
+    type ong = ONNXAPIGraph.ONNXGraph
 
     type MNISTGraph() = 
 
@@ -352,8 +316,8 @@ module FullModel =
 
         [<ReflectedDefinition>]
         member this.Forward(graph: Graph, x: ValueInfo) = 
-            let constant (x:Tensor<float32>) = ong.constant(graph,x)
-            ong.add(graph, ong.mat_mul(graph, ong.reshape(graph, (this.Rec (graph, this.Rec(graph, x,constant p5,constant p6,2L),constant p87,constant p88,3L)),ong.constant(graph,[|1L;256L|].ToTensor())),ong.reshape(graph,constant p193,ong.constant(graph,[|256L;10L|].ToTensor()))),constant p194)
+            let constant (x:Tensor<float32>) = Constants.constant(graph,x)
+            ong.add(graph, ong.mat_mul(graph, ong.reshape(graph, (this.Rec (graph, this.Rec(graph, x,constant p5,constant p6,2L),constant p87,constant p88,3L)),Constants.constant(graph,[|1L;256L|].ToTensor())),ong.reshape(graph,constant p193,Constants.constant(graph,[|256L;10L|].ToTensor()))),constant p194)
 
     [<Test>]
     let ``full mnist``() = 

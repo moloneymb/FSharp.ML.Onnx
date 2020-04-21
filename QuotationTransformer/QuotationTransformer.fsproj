@@ -5,13 +5,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="CompilerComponent.fs" />
-    <Compile Include="ExpressionReplacer.fs" />
-    <None Include="Scratch.fsx" />
+    <None Include="T.fsx" />
+    <None Include="Base.fsx" />
+    <None Include="ONNXScratch3.fsx" />
+    <None Include="ExprRun.fsx" />
+    <None Include="BuiltInExperiments.fsx" />
     <Compile Include="Common.fs" />
     <Compile Include="Transformer.fs" />
-    <None Include="ONNXScratch.fsx" />
-    <None Include="QuotationScratch.fsx" />
+    <None Include="ExprTransformer.fsx" />
   </ItemGroup>
 
   <ItemGroup>

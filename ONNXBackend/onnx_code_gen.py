@@ -172,6 +172,32 @@ def mapONNXToFSharp(name):
     }
     return mapping.get(name)
 
+
+def mapONNXToDataType(name):
+    mapping = {
+        "tensor(uint8)" :"UINT8", 
+        "tensor(uint16)" :"UINT16",
+        "tensor(uint32)" : "UINT32",
+        "tensor(uint64)" : "UINT64",
+        "tensor(int8)" : "INT8",
+        "tensor(int16)" : "INT16",
+        "tensor(int32)" : "INT32",
+        "tensor(int64)" : "INT64",
+        "tensor(float16)" : "FLOAT16",
+        "tensor(float)" : "FLOAT32",
+        "tensor(double)" : "DOUBLE", #"float", #limiting it for now
+        "tensor(string)" : "STRING",
+        "tensor(bool)" : "BOOL",
+        "tensor(complex64)" : "COMPLEX64",
+        "tensor(complex128)" : "COMPLEX128",
+    }
+    if mapping.get(name):
+        return "DataType." + mapping.get(name)
+    else:
+        return None
+
+#mapONNXToDataType("tensor(bool)")
+
 def mapONNXToDtype(name):
     mapping = {
         "tensor(uint8)" : 2,
@@ -450,7 +476,7 @@ def get_params_graph(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typ
         [f'?{x.name}: {mapAttrType(x)}' for x in opt_attrs])
     return params
 
-def code_gen_single_output_graph(fo,schema,typeMap,outputTypes):
+def code_gen_single_output_graph(fo,schema,typeMap,outputStr,outputCount):
     (req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs) = get_part_inputs_and_attrs(schema)
     opt_attrs = [x for x in opt_attrs if not ("Pool" in schema.name and x.name == "ceil_mode")] # Should figure out how
     params = get_params_graph(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
@@ -469,50 +495,134 @@ def code_gen_single_output_graph(fo,schema,typeMap,outputTypes):
         raise Exception("ops with both optional and variadic inputs are not yet supported")
     else:
         raise Exception("shouldn't happen")
-    #    if len(opt_inputs) == 0 and len(var_inputs) == 0: #only req_inputs
-    #        inputs = '[|' + '; '.join([f'Some({x.name})' for x in req_inputs]) + '|]'
-    #    elif len(opt_inputs) != 0 and len(var_inputs) == 0:
-    #        inputs = '([|' + '; '.join([f'Some({x.name})' for x in req_inputs] + [x.name for x in opt_inputs]) + '|] )'
-    #    elif len(opt_inputs) == 0 and len(var_inputs) != 0:
-    #        if len(req_inputs) == 0: inputs = f'({var_inputs[0].name})'
-    #        else: inputs = '([|' + '; '.join([f'yield {x.name}' for x in req_inputs] + [f'yield! {x.name}' for x in var_inputs]) + '|])'
-    #    elif len(opt_inputs) != 0 and len(var_inputs) != 0:
-    #        raise Exception("ops with both optional and variadic inputs are not yet supported")
-    #    else:
-    #        raise Exception("shouldn't happen")
-    if isinstance(outputTypes,list):
-        outputs = ", ".join(outputTypes)
-        # TODO figure out outputs
-        print(outputTypes)
-        #fo.write(f'\n        MV() |> fun mv -> execNodeTuple{len(outputTypes)}<{outputs}> "{schema.name}" {inputs} {optionalChoose(attrProto)}\n')
-        fo.write(f'\n        graph.AddNode("{schema.name}", {inputs}, {outputs}, [|{attrProto}|]).[0]\n')
-    else:
-        fo.write(f'\n        graph.AddNode("{schema.name}", {inputs}, [||], [|{attrProto}|]).[0]\n')
-        #fo.write(f'\n        MV() |> fun mv -> execNode<{outputTypes}> "{schema.name}" {inputs} {optionalChoose(attrProto)}\n')
+    fo.write(f'\n        graph.AddNode("{schema.name}", {inputs}, [|{outputStr}|], [|{attrProto}|]) |> toTuple{outputCount}\n')
 
 
-# single type constraints
-#for schema in so_single_type:
-#schema = so_single_type[0]
+#schema = getSchema("Concat")
+#schema.inputs[0].option == FormalParameterOption.Variadic
 
-#    print(f'{schema.name}')
-#    schemas_out.append(schema.name)
+def mapOutputTypeNames(schema):
+    tcs = {z.type_param_str:z.allowed_type_strs for z in schema.type_constraints}
+    # This reversal makes sure it matches the first input with the typeStr
+    # which is less likely to be an optional attribute
+    ins = {x.typeStr : x.name for x in list(schema.inputs)[::-1]}
+    isVariadic = {x.typeStr : (x.option == FormalParameterOption.Variadic) for x in list(schema.inputs)[::-1]}
+    # TODO check if variadic, if so use the first first item
+    def mapOutputTypeName(typeStr):
+        if typeStr in ins:
+             return ins[typeStr] + (".[0].dt" if isVariadic[typeStr] else ".dt")
+        else:
+             if typeStr in tcs:
+                 ats = tcs[typeStr]
+                 if len(ats) != 1:
+                    print(ins)
+                    print(ats)
+                    print(tcs)
+                    raise Exception("err")
+                 return mapONNXToDataType(ats[0])
+             else:
+                 # TODO perhaps add a check here
+                 return mapONNXToDataType(typeStr)
+    return [mapOutputTypeName(output.typeStr)  for output in schema.outputs]
 
-#choseFSharpTypes(schema.type_constraints[0])
+#print_schema(getSchema("Scatter"))
 
-#    for t in choseFSharpTypes(schema.type_constraints[0]):
-#        code_gen_single_output(fo,schema,(lambda x: t if mapONNXToFSharp(x) is None else mapONNXToFSharp(x)),t)
-# single type constraints
-
-for schema in so_single_type:
+for schema in (so_zero_type + so_single_type + so_single_output_type + so_multi_type):
     print(f'{schema.name}')
     schemas_out.append(schema.name)
-    code_gen_single_output_graph(fo,schema,(lambda x: "never"),t)
+    outputs = mapOutputTypeNames(schema)
+    if schema.name == "NonMaxSuppression":
+        code_gen_single_output_graph(fo,schema,(lambda x: "never"),"DataType.INT64", 1)
+    elif schema.name == "QuantizeLinear":
+        # NODE: the output type depends on this variable
+        # On the off chance this is used then without a y_zero_point parameter then we'll fix it
+        code_gen_single_output_graph(fo,schema,(lambda x: "never"),"y_zero_point.Value.dt", 1)
+    else:
+        code_gen_single_output_graph(fo,schema,(lambda x: "never"),"; ".join(outputs), len(outputs))
+
+
+
+#for schemaName in ['TreeEnsembleClassifier', 'LSTM', 'LinearClassifier', 'SVMClassifier', 'MaxPool', 'GRU', 'TopK', 'Dropout', 'Unique', 'DynamicQuantizeLinear', 'RNN', 'BatchNormalization']:
+#'TreeEnsembleClassifier' free output type constraint
+#'LinearClassifier','SVMClassifier',
+for schemaName in [ 'LSTM',   'MaxPool', 'GRU', 'TopK', 'Dropout', 'Unique', 'DynamicQuantizeLinear', 'RNN', 'BatchNormalization']:
+    schema = getSchema(schemaName)
+    print(f'{schema.name}')
+    schemas_out.append(schema.name)
+    outputs = mapOutputTypeNames(schema)
+    #if not('Classifier' in schemaName and mapONNXToFSharp(type_mappings.get(schema.outputs[0].typeStr)) == "string"):
+        # skip if we contain unsupported types
+    #if len([v for (_,v) in type_mappings.items() if mapONNXToFSharp(v) is None ]) == 0:
+    #    output_types = [mapONNXToFSharp(type_mappings.get(x.typeStr) if type_mappings.get(x.typeStr) is not None else x.typeStr) for x in schema.outputs]
+    code_gen_single_output_graph(fo,schema,(lambda x: "never"),"; ".join(outputs), len(outputs))
+
+
+#schema = getSchema("EyeLike")
+#schemas_out.append(schema.name)
+#typeMaps = [t for t in schema.inputs[0].types if mapONNXToFSharp(t) is not None] if len(schema.inputs) == 1 else [""]
+#typeMaps 
+
+for schemaName in ['SequenceEmpty', 'EyeLike', 'Multinomial', 'RandomUniformLike', 'RandomNormalLike', 'RandomNormal', 'RandomUniform', 'Cast']:
+    schema = getSchema(schemaName)
+    print(f'{schema.name}')
+    schemas_out.append(schema.name)
+    typeMaps = [t for t in schema.inputs[0].types if mapONNXToFSharp(t) is not None] if len(schema.inputs) == 1 else [""]
+    #for t in typeMaps:
+    #    typeMap = lambda x: mapONNXToFSharp(t)
+    (req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs) = get_part_inputs_and_attrs(schema)
+    for (gen1,gen2) in ([("<'a>","getDataType(typeof<'a>)")] if (len(schema.inputs) == 0 or schema.name == "Cast") else [("<'a>","getDataType(typeof<'a>)"),("","input.dt")]):
+    #for (gen1,gen2) in ([("<'a>","getDataType(typeof<'a>)"),("","input.dt")]):
+        req_attrs = [x for x in req_attrs if x.name != 'dtype' and x.name != 'to']
+        opt_attrs = [x for x in opt_attrs if x.name != 'dtype' and x.name != 'to']
+        params = get_params_graph(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
+        params = ", " + params if params else ""
+        fo.write(f'    static member {pascal_to_underscore(schema.name)}{gen1}(graph: Graph{params}) =')
+        attrProto = "; ".join([f'Attr.{mapAttrFunction(attr)}("{attr.name}", {attr.name}{mapDefaultValue(attr.default_value)})' for attr in (req_attrs + opt_attrs)])
+        # NOTE We're assuming inputs are matched structually by order
+        inputs = '[|' + '; '.join([f'{x.name}' for x in req_inputs]) + '|]'
+        fo.write(f'\n        graph.AddNode("{schema.name}", {inputs}, [|{gen2}|], [|{attrProto}|])\n')
 
 fo.flush()
 fo.close()
 
-schema = so_single_output_type[0]
+#print_schema(getSchema("QuantizeLinear"))
+
+#TODO QuantizeLinear, input y_zero_point should not be optional as it's the only parameter with output of T2
+#TODO NonMaxSuppression, output type is a single list that happens to match an input typeStr, should jsut be DataType.INT64
+#TODO Variance
+
+#mapONNXToDataType(getSchema("NonMaxSuppression").outputs[0].typeStr)
+
+#print_schema(getSchema("NonMaxSuppression")) #
+#print_schema(getSchema("QuantizeLinear")), #
+
+#schema = so_single_output_type[0]
+
+#mapONNXToDataType
+
+#TODO calculate output types, either must be single or in reference to an input
+
+
+
+
+#[mapOutputTypeNames(schema) for schema in so_single_type]
+#[mapOutputTypeNames(schema) for schema in so_multi_type]
+
+
+#([mapOutputTypeNames(schema) for schema in so_single_output_type])
+
+
+
+#    return [{y:x for (x,y) in zip(xs,[z.type_param_str for z in schema.type_constraints])}  for xs in list(combinations([x.allowed_type_strs for x in schema.type_constraints]))]
+
+#len(schema.outputs[0].types)
+#[tc for tc in schema.type_constraints][0]
+#schema.outputs[0].typeStr
+
+
+#def get_output_types(schema):
+
+
 
 #print_schema(schema)
 

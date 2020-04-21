@@ -1715,50 +1715,50 @@ type ONNX() =
         MV() |> fun mv -> execNode<int64> "CategoryMapper" [|mv.c(X)|] ([|Attr.ints("cats_int64s", cats_int64s); Attr.strings("cats_strings", cats_strings); Attr.int("default_int64", default_int64, -1L); Attr.string("default_string", default_string, "_Unused")|] |> Array.choose id)
     static member sequence_empty<'a>() =
         execNodeCheck<'a> "SequenceEmpty" [||] [||] [||]
-    static member eye_like<'a>(input: Tensor<uint8>, ?k: int64) =
-        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like(input: Tensor<uint8>, ?k: int64) =
-        execNodeCheck<uint8> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like<'a>(input: Tensor<int8>, ?k: int64) =
-        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like(input: Tensor<int8>, ?k: int64) =
-        execNodeCheck<int8> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like<'a>(input: Tensor<int>, ?k: int64) =
-        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like(input: Tensor<int>, ?k: int64) =
-        execNodeCheck<int> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
     static member eye_like<'a>(input: Tensor<bool>, ?k: int64) =
-        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
     static member eye_like(input: Tensor<bool>, ?k: int64) =
-        execNodeCheck<bool> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like<'a>(input: Tensor<int16>, ?k: int64) =
-        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like(input: Tensor<int16>, ?k: int64) =
-        execNodeCheck<int16> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like<'a>(input: Tensor<int64>, ?k: int64) =
-        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like(input: Tensor<int64>, ?k: int64) =
-        execNodeCheck<int64> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like<'a>(input: Tensor<float32>, ?k: int64) =
-        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like(input: Tensor<float32>, ?k: int64) =
-        execNodeCheck<float32> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like<'a>(input: Tensor<uint64>, ?k: int64) =
-        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
-    static member eye_like(input: Tensor<uint64>, ?k: int64) =
-        execNodeCheck<uint64> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+        execNodeCheck<bool> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like<'a>(input: Tensor<uint8>, ?k: int64) =
+        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like(input: Tensor<uint8>, ?k: int64) =
+        execNodeCheck<uint8> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like<'a>(input: Tensor<int8>, ?k: int64) =
+        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like(input: Tensor<int8>, ?k: int64) =
+        execNodeCheck<int8> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
     static member eye_like<'a>(input: Tensor<uint16>, ?k: int64) =
-        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
     static member eye_like(input: Tensor<uint16>, ?k: int64) =
-        execNodeCheck<uint16> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+        execNodeCheck<uint16> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like<'a>(input: Tensor<int>, ?k: int64) =
+        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like(input: Tensor<int>, ?k: int64) =
+        execNodeCheck<int> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like<'a>(input: Tensor<int16>, ?k: int64) =
+        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like(input: Tensor<int16>, ?k: int64) =
+        execNodeCheck<int16> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like<'a>(input: Tensor<float32>, ?k: int64) =
+        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like(input: Tensor<float32>, ?k: int64) =
+        execNodeCheck<float32> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like<'a>(input: Tensor<int64>, ?k: int64) =
+        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like(input: Tensor<int64>, ?k: int64) =
+        execNodeCheck<int64> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
     static member eye_like<'a>(input: Tensor<double>, ?k: int64) =
-        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
     static member eye_like(input: Tensor<double>, ?k: int64) =
-        execNodeCheck<double> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+        execNodeCheck<double> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like<'a>(input: Tensor<uint64>, ?k: int64) =
+        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+    static member eye_like(input: Tensor<uint64>, ?k: int64) =
+        execNodeCheck<uint64> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
     static member eye_like<'a>(input: Tensor<uint32>, ?k: int64) =
-        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+        execNodeCheck<'a> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
     static member eye_like(input: Tensor<uint32>, ?k: int64) =
-        execNodeCheck<uint32> "EyeLike" [|MV.mv(1,input)|] [|2L; 3L; 6L; 9L; 7L; 1L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
+        execNodeCheck<uint32> "EyeLike" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 1L; 7L|] ([|Attr.int("k", k, 0L)|] |> Array.choose id)
     static member multinomial<'a>(input: Tensor<double>, ?sample_size: int64, ?seed: float32) =
         execNodeCheck<'a> "Multinomial" [|MV.mv(1,input)|] [|7L; 6L|] ([|Attr.int("sample_size", sample_size, 1L); Attr.float("seed", seed)|] |> Array.choose id)
     static member multinomial(input: Tensor<double>, ?sample_size: int64, ?seed: float32) =
@@ -1767,106 +1767,106 @@ type ONNX() =
         execNodeCheck<'a> "Multinomial" [|MV.mv(1,input)|] [|7L; 6L|] ([|Attr.int("sample_size", sample_size, 1L); Attr.float("seed", seed)|] |> Array.choose id)
     static member multinomial(input: Tensor<float32>, ?sample_size: int64, ?seed: float32) =
         execNodeCheck<float32> "Multinomial" [|MV.mv(1,input)|] [|7L; 6L|] ([|Attr.int("sample_size", sample_size, 1L); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like<'a>(input: Tensor<uint8>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like(input: Tensor<uint8>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<uint8> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like<'a>(input: Tensor<string>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like(input: Tensor<string>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<string> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like<'a>(input: Tensor<int8>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like(input: Tensor<int8>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<int8> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like<'a>(input: Tensor<int>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like(input: Tensor<int>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<int> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_uniform_like<'a>(input: Tensor<bool>, ?high: float32, ?low: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_uniform_like(input: Tensor<bool>, ?high: float32, ?low: float32, ?seed: float32) =
         execNodeCheck<bool> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like<'a>(input: Tensor<int16>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like<'a>(input: Tensor<uint8>, ?high: float32, ?low: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like(input: Tensor<int16>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<int16> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like<'a>(input: Tensor<int64>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like(input: Tensor<uint8>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<uint8> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like<'a>(input: Tensor<int8>, ?high: float32, ?low: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like(input: Tensor<int64>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<int64> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like<'a>(input: Tensor<float32>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like(input: Tensor<float32>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<float32> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like<'a>(input: Tensor<uint64>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like(input: Tensor<uint64>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<uint64> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like(input: Tensor<int8>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<int8> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_uniform_like<'a>(input: Tensor<uint16>, ?high: float32, ?low: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_uniform_like(input: Tensor<uint16>, ?high: float32, ?low: float32, ?seed: float32) =
         execNodeCheck<uint16> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like<'a>(input: Tensor<Complex>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like<'a>(input: Tensor<int>, ?high: float32, ?low: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_uniform_like(input: Tensor<Complex>, ?high: float32, ?low: float32, ?seed: float32) =
-        execNodeCheck<Complex> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like(input: Tensor<int>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<int> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like<'a>(input: Tensor<int16>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like(input: Tensor<int16>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<int16> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_uniform_like<'a>(input: Tensor<double>, ?high: float32, ?low: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_uniform_like(input: Tensor<double>, ?high: float32, ?low: float32, ?seed: float32) =
         execNodeCheck<double> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like<'a>(input: Tensor<string>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like(input: Tensor<string>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<string> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like<'a>(input: Tensor<float32>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like(input: Tensor<float32>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<float32> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like<'a>(input: Tensor<int64>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like(input: Tensor<int64>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<int64> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like<'a>(input: Tensor<Complex>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like(input: Tensor<Complex>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<Complex> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like<'a>(input: Tensor<uint64>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_uniform_like(input: Tensor<uint64>, ?high: float32, ?low: float32, ?seed: float32) =
+        execNodeCheck<uint64> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_uniform_like<'a>(input: Tensor<uint32>, ?high: float32, ?low: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_uniform_like(input: Tensor<uint32>, ?high: float32, ?low: float32, ?seed: float32) =
         execNodeCheck<uint32> "RandomUniformLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like<'a>(input: Tensor<uint8>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like(input: Tensor<uint8>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<uint8> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like<'a>(input: Tensor<string>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like(input: Tensor<string>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<string> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like<'a>(input: Tensor<int8>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like(input: Tensor<int8>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<int8> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like<'a>(input: Tensor<int>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like(input: Tensor<int>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<int> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_normal_like<'a>(input: Tensor<bool>, ?mean: float32, ?scale: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_normal_like(input: Tensor<bool>, ?mean: float32, ?scale: float32, ?seed: float32) =
         execNodeCheck<bool> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like<'a>(input: Tensor<int16>, ?mean: float32, ?scale: float32, ?seed: float32) =
+    static member random_normal_like<'a>(input: Tensor<uint8>, ?mean: float32, ?scale: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like(input: Tensor<int16>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<int16> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like<'a>(input: Tensor<int64>, ?mean: float32, ?scale: float32, ?seed: float32) =
+    static member random_normal_like(input: Tensor<uint8>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<uint8> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like<'a>(input: Tensor<int8>, ?mean: float32, ?scale: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like(input: Tensor<int64>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<int64> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like<'a>(input: Tensor<float32>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like(input: Tensor<float32>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<float32> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like<'a>(input: Tensor<uint64>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like(input: Tensor<uint64>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<uint64> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like(input: Tensor<int8>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<int8> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_normal_like<'a>(input: Tensor<uint16>, ?mean: float32, ?scale: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_normal_like(input: Tensor<uint16>, ?mean: float32, ?scale: float32, ?seed: float32) =
         execNodeCheck<uint16> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like<'a>(input: Tensor<Complex>, ?mean: float32, ?scale: float32, ?seed: float32) =
+    static member random_normal_like<'a>(input: Tensor<int>, ?mean: float32, ?scale: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member random_normal_like(input: Tensor<Complex>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        execNodeCheck<Complex> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like(input: Tensor<int>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<int> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like<'a>(input: Tensor<int16>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like(input: Tensor<int16>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<int16> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_normal_like<'a>(input: Tensor<double>, ?mean: float32, ?scale: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_normal_like(input: Tensor<double>, ?mean: float32, ?scale: float32, ?seed: float32) =
         execNodeCheck<double> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like<'a>(input: Tensor<string>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like(input: Tensor<string>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<string> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like<'a>(input: Tensor<float32>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like(input: Tensor<float32>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<float32> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like<'a>(input: Tensor<int64>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like(input: Tensor<int64>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<int64> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like<'a>(input: Tensor<Complex>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like(input: Tensor<Complex>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<Complex> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like<'a>(input: Tensor<uint64>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
+    static member random_normal_like(input: Tensor<uint64>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        execNodeCheck<uint64> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_normal_like<'a>(input: Tensor<uint32>, ?mean: float32, ?scale: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomNormalLike" [|MV.mv(1,input)|] [|1L|] ([|Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_normal_like(input: Tensor<uint32>, ?mean: float32, ?scale: float32, ?seed: float32) =
@@ -1875,30 +1875,30 @@ type ONNX() =
         execNodeCheck<'a> "RandomNormal" [||] [|1L|] ([|Attr.ints("shape", shape); Attr.float("mean", mean, 0.0f); Attr.float("scale", scale, 1.0f); Attr.float("seed", seed)|] |> Array.choose id)
     static member random_uniform<'a>(shape: int64[], ?high: float32, ?low: float32, ?seed: float32) =
         execNodeCheck<'a> "RandomUniform" [||] [|1L|] ([|Attr.ints("shape", shape); Attr.float("high", high, 1.0f); Attr.float("low", low, 0.0f); Attr.float("seed", seed)|] |> Array.choose id)
-    static member cast<'a>(input: Tensor<uint8>) =
-        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|2L; 8L; 3L; 6L; 9L; 7L; 1L|] [||]
-    static member cast<'a>(input: Tensor<string>) =
-        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|2L; 8L; 3L; 6L; 9L; 7L; 1L|] [||]
-    static member cast<'a>(input: Tensor<int8>) =
-        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|2L; 8L; 3L; 6L; 9L; 7L; 1L|] [||]
-    static member cast<'a>(input: Tensor<int>) =
-        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|2L; 8L; 3L; 6L; 9L; 7L; 1L|] [||]
     static member cast<'a>(input: Tensor<bool>) =
-        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|2L; 8L; 3L; 6L; 9L; 7L; 1L|] [||]
-    static member cast<'a>(input: Tensor<int16>) =
-        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|2L; 8L; 3L; 6L; 9L; 7L; 1L|] [||]
-    static member cast<'a>(input: Tensor<int64>) =
-        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|2L; 8L; 3L; 6L; 9L; 7L; 1L|] [||]
-    static member cast<'a>(input: Tensor<float32>) =
-        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|2L; 8L; 3L; 6L; 9L; 7L; 1L|] [||]
-    static member cast<'a>(input: Tensor<uint64>) =
-        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|2L; 8L; 3L; 6L; 9L; 7L; 1L|] [||]
+        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 8L; 1L; 7L|] [||]
+    static member cast<'a>(input: Tensor<uint8>) =
+        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 8L; 1L; 7L|] [||]
+    static member cast<'a>(input: Tensor<int8>) =
+        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 8L; 1L; 7L|] [||]
     static member cast<'a>(input: Tensor<uint16>) =
-        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|2L; 8L; 3L; 6L; 9L; 7L; 1L|] [||]
+        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 8L; 1L; 7L|] [||]
+    static member cast<'a>(input: Tensor<int>) =
+        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 8L; 1L; 7L|] [||]
+    static member cast<'a>(input: Tensor<int16>) =
+        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 8L; 1L; 7L|] [||]
+    static member cast<'a>(input: Tensor<string>) =
+        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 8L; 1L; 7L|] [||]
+    static member cast<'a>(input: Tensor<float32>) =
+        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 8L; 1L; 7L|] [||]
+    static member cast<'a>(input: Tensor<int64>) =
+        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 8L; 1L; 7L|] [||]
     static member cast<'a>(input: Tensor<double>) =
-        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|2L; 8L; 3L; 6L; 9L; 7L; 1L|] [||]
+        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 8L; 1L; 7L|] [||]
+    static member cast<'a>(input: Tensor<uint64>) =
+        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 8L; 1L; 7L|] [||]
     static member cast<'a>(input: Tensor<uint32>) =
-        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|2L; 8L; 3L; 6L; 9L; 7L; 1L|] [||]
+        execNodeCheck<'a> "Cast" [|MV.mv(1,input)|] [|9L; 2L; 3L; 6L; 8L; 1L; 7L|] [||]
     static member tree_ensemble_classifier(X: Tensor<float32>, ?base_values: float32[], ?class_ids: int64[], ?class_nodeids: int64[], ?class_treeids: int64[], ?class_weights: float32[], ?classlabels_int64s: int64[], ?classlabels_strings: string[], ?nodes_falsenodeids: int64[], ?nodes_featureids: int64[], ?nodes_hitrates: float32[], ?nodes_missing_value_tracks_true: int64[], ?nodes_modes: string[], ?nodes_nodeids: int64[], ?nodes_treeids: int64[], ?nodes_truenodeids: int64[], ?nodes_values: float32[], ?post_transform: string) =
         MV() |> fun mv -> execNodeTuple2<int64, float32> "TreeEnsembleClassifier" [|mv.c(X)|] ([|Attr.floats("base_values", base_values); Attr.ints("class_ids", class_ids); Attr.ints("class_nodeids", class_nodeids); Attr.ints("class_treeids", class_treeids); Attr.floats("class_weights", class_weights); Attr.ints("classlabels_int64s", classlabels_int64s); Attr.strings("classlabels_strings", classlabels_strings); Attr.ints("nodes_falsenodeids", nodes_falsenodeids); Attr.ints("nodes_featureids", nodes_featureids); Attr.floats("nodes_hitrates", nodes_hitrates); Attr.ints("nodes_missing_value_tracks_true", nodes_missing_value_tracks_true); Attr.strings("nodes_modes", nodes_modes); Attr.ints("nodes_nodeids", nodes_nodeids); Attr.ints("nodes_treeids", nodes_treeids); Attr.ints("nodes_truenodeids", nodes_truenodeids); Attr.floats("nodes_values", nodes_values); Attr.string("post_transform", post_transform, "NONE")|] |> Array.choose id)
     static member tree_ensemble_classifier(X: Tensor<double>, ?base_values: float32[], ?class_ids: int64[], ?class_nodeids: int64[], ?class_treeids: int64[], ?class_weights: float32[], ?classlabels_int64s: int64[], ?classlabels_strings: string[], ?nodes_falsenodeids: int64[], ?nodes_featureids: int64[], ?nodes_hitrates: float32[], ?nodes_missing_value_tracks_true: int64[], ?nodes_modes: string[], ?nodes_nodeids: int64[], ?nodes_treeids: int64[], ?nodes_truenodeids: int64[], ?nodes_values: float32[], ?post_transform: string) =

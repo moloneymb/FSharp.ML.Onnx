@@ -1,5 +1,6 @@
 ﻿module ProtoBuf
 
+open System
 open System.Text
 open System.IO
 open Onnx
@@ -56,6 +57,32 @@ type DataType =
     // floating-point number truncated to 16 bits.
     // This format has 1 sign bit, 8 exponent bits, and 7 mantissa bits.
     | BFLOAT16 = 16
+
+let tryDataTypeToType (x:DataType) = 
+    match x with
+    | DataType.FLOAT32 -> Some typeof<float32>
+    | DataType.UINT8 -> Some typeof<uint8>
+    | DataType.INT8 -> Some typeof<int8>
+    | DataType.UINT16 -> Some typeof<uint16>
+    | DataType.INT16 -> Some typeof<int16>
+    | DataType.INT32 -> Some typeof<int32>
+    | DataType.INT64  -> Some typeof<int64>
+    | DataType.STRING -> Some typeof<string>
+    | DataType.BOOL -> Some typeof<bool>
+    | DataType.FLOAT16 -> None //typeof<float16>
+    | DataType.DOUBLE -> Some typeof<double>
+    | DataType.UINT32 -> Some typeof<uint32>
+    | DataType.UINT64 -> Some typeof<uint64>
+    | DataType.COMPLEX64 -> None //Some typeof<System.Numerics.Complex>
+    | DataType.COMPLEX128 ->Some typeof<System.Numerics.Complex> 
+    | DataType.BFLOAT16 -> None
+    | _ -> None
+
+type DV<'a>(f : 'a, dispose : unit -> unit) =
+    member this.F = f
+    member this.Dispose() = (this :> IDisposable).Dispose()
+    interface IDisposable with
+        member this.Dispose() = dispose()
 
 type Attr() =
     static member float(name: string, value: float32) = 
@@ -138,7 +165,6 @@ let bytesToInts(buffer : byte[]) =
     let xs= Array.zeroCreate<int64> (buffer.Length / 8)
     System.Buffer.BlockCopy(buffer, 0, xs, 0, buffer.Length)
     xs
-
 
 type Tensor with
     static member FromTensorProtoFloat32(tp : TensorProto) = 
@@ -305,4 +331,25 @@ type Graph =
             let outputValueInfos = outputs |> Array.map (fun dt -> { name = this.GetName(sprintf "%s_Output" name); dt = dt})
             this.AddNode(simple name (this.GetName(name), (inputs |> Array.map (fun x -> x.name)), (outputValueInfos |> Array.map (fun x -> x.name)), attrs |> Array.choose id))
             outputValueInfos
+
+// Helper functions for converting arrays to tuples
+let toTuple1 (xs:'a[]) = xs.[0]
+let toTuple2 (xs:'a[]) = (xs.[0],xs.[1])
+let toTuple3 (xs:'a[]) = (xs.[0],xs.[1],xs.[2])
+let toTuple4 (xs:'a[]) = (xs.[0],xs.[1],xs.[2],xs.[3])
+let toTuple5 (xs:'a[]) = (xs.[0],xs.[1],xs.[2],xs.[3],xs.[4])
+
+type Constants() =
+    static member constant(graph: Graph, t: Tensor<float32>) : ValueInfo =
+        graph.AddNode("Constant", [||], [|DataType.FLOAT32|],[|Attr.tensor(t)|]).[0]
+
+    static member constant(graph: Graph, t: Tensor<double>) : ValueInfo =
+        graph.AddNode("Constant", [||], [|DataType.DOUBLE|],[|Attr.tensor(t)|]).[0]
+
+    static member constant(graph: Graph, t: Tensor<int32>) : ValueInfo =
+        graph.AddNode("Constant", [||], [|DataType.INT32|],[|Attr.tensor(t)|]).[0]
+
+    static member constant(graph: Graph, t: Tensor<int64>) : ValueInfo =
+        graph.AddNode("Constant", [||], [|DataType.INT64|],[|Attr.tensor(t)|]).[0]
+
 

@@ -1,26 +1,14 @@
-﻿#I @"C:\Users\moloneymb\.nuget\packages\"
-#r @"fsharp.compiler.service\25.0.1\lib\net45\FSharp.Compiler.Service.dll"
-#r @"fantomas\2.9.2\lib\net452\Fantomas.dll"
-#r @"falanx.machinery\0.5.2\lib\netstandard2.0\Falanx.Machinery.dll"
-#r @"fsharp.quotations.evaluator\2.1.0\lib\netstandard2.0\FSharp.Quotations.Evaluator.dll"
-#r @"system.runtime.compilerservices.unsafe/4.5.2/lib/netstandard2.0/System.Runtime.CompilerServices.Unsafe.dll"
-#r @"system.memory/4.5.3/lib/netstandard2.0/System.Memory.dll"
-#r @"fparsec/1.1.1/lib/net45/FParsecCS.dll"
-#r @"fparsec/1.1.1/lib/net45/FParsec.dll"
-
-// https://github.com/fable-compiler/Fable/blob/75a5f78bdc162d6785bef3e1d7012679d7a54f84/src/Fable.Transforms/Replacements.fs
-// https://github.com/ZachBray/FunScript/blob/941d28b40752cdc81a22f7e42ae21e9844c86fdb/src/main/FunScript/ExpressionReplacer.fs
-
-#load "Common.fs"
-
+﻿(*
+    Experiments for replacing method calls to built in functions with the quotation equivilant
+    I don't have a prefered method at this stage. This is not being used at this stage as it's fine
+    to run the with Call for the purposes of building a ONNX Graph
+*)
+#load "Base.fsx"
 open Common
-open FSharp.Quotations.Evaluator
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.DerivedPatterns
 open Microsoft.FSharp.Quotations.Patterns
-open System
 open System.Reflection
-open System.IO
 
 // TODO replace built in operators with 
 // NOTE: This is not needed as we can execute built-ins during graph construction
@@ -56,7 +44,6 @@ let builtInMap =
     |> Array.choose (fun x -> Expr.TryGetReflectedDefinition (x) |> Option.map (fun y -> x.Name, y)) |> Map.ofArray
 
 
-
 //let (|BuiltIn|_|) (table: Map<string,Expr>) (mi: MethodInfo)  = table.TryFind(mi.Name)
 
 //builtInMap |> Map.toArray |> Array.map fst
@@ -80,13 +67,8 @@ let builtInMap =
 //| _ -> failwith "err"
 //let f (mi:MethodInfo) =  builtInMap.TryFind(mi.Name)
 
-
-module Option =
-    let toNone _ = None
-
-//<@ "a" |> fun b -> b + "c" @> |> Expr.unfoldWhileChanged (ExprTransforms.expand (fun mi -> builtInMap.TryFind(mi.Name)) Option.toNone)
-
-//open BuiltIns
+//module Option =
+//    let toNone _ = None
 
 let expand (g: MethodInfo -> Expr option) (expr: Expr) = 
     let f ((instanceO : Expr option),(yss:Var list list),rd, zs) =
@@ -116,12 +98,4 @@ let expand (g: MethodInfo -> Expr option) (expr: Expr) =
         f (instanceO, yss, rd, zs)
     //| Patterns.Call(instanceO, (TryFunc f (Lambdas(yss,_) as rd)), zs) ->
     | _ -> None
-
-//<@ "a" |> fun b -> b + "c" @> |> Expr.unfoldWhileChanged (expand f) |> Seq.last
-
-
-//match <@@ (|>) @@> |> Expr.tryFirstCall |> Option.get with
-//| Call(None, TryFunc f (Lambdas (yss,body)), args) -> yss
-//| _ -> failwith "todo"
-
 

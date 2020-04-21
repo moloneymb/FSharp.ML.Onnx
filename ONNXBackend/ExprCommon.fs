@@ -2,7 +2,10 @@
 
 open System
 open System.Reflection
-open Fantomas
+open Microsoft.ML.OnnxRuntime
+open Microsoft.ML.OnnxRuntime.Tensors
+open ProtoBuf
+open Microsoft.FSharp.Reflection
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.DerivedPatterns
 open Microsoft.FSharp.Quotations.ExprShape
@@ -10,24 +13,26 @@ open Microsoft.FSharp.Quotations.Patterns
 open System.Text.RegularExpressions
 
 let (|TryFunc|_|) (f: 'a -> 'b option ) (x:'a) = f x
+let (|Found|_|) map key = map |> Map.tryFind key
 
-let private regexs = [| Regex(@"Operators\.string\<[_A-Za-z0-9]*\>"), "string"; Regex(@"\(unitVar[0-9]* : Unit\)"), "()" |]
-
-
-let sprintExpr (expr:Expr) = 
-    // TODO figure out ommit Enclosing Types
-    Falanx.Machinery.Quotations.ToAst(expr,knownNamespaces = set ["Operators"])
-    |> snd
-    |> fun x -> CodeFormatter.FormatAST(x, "helloWorld.fs",  None, FormatConfig.FormatConfig.Default) 
-    |> Falanx.Machinery.Expr.cleanUpTypeName
-    |> fun x -> 
-        let xs = x.Substring(31).Replace("\r\n","\n").Split([|'\n';'\r'|]) 
-        if xs.[0].Contains(";") then xs.[0].Substring(33) 
-        else 
-            (xs.[2..] |> Array.choose (fun x -> if x.Length > 3 then Some(x.Substring(4)) else None) |> String.concat "\n")
-        |> fun x -> x.Trim(' ','\n','\r')
-        |> fun x -> (x,regexs) ||> Array.fold (fun (x:string) ((r,s):Regex*string) -> r.Replace(x,s))
-
+//open Fantomas
+//let private regexs = [| Regex(@"Operators\.string\<[_A-Za-z0-9]*\>"), "string"; Regex(@"\(unitVar[0-9]* : Unit\)"), "()" |]
+//
+//
+//let sprintExpr (expr:Expr) = 
+//    // TODO figure out ommit Enclosing Types
+//    Falanx.Machinery.Quotations.ToAst(expr,knownNamespaces = set ["Operators"])
+//    |> snd
+//    |> fun x -> CodeFormatter.FormatAST(x, "helloWorld.fs",  None, FormatConfig.FormatConfig.Default) 
+//    |> Falanx.Machinery.Expr.cleanUpTypeName
+//    |> fun x -> 
+//        let xs = x.Substring(31).Replace("\r\n","\n").Split([|'\n';'\r'|]) 
+//        if xs.[0].Contains(";") then xs.[0].Substring(33) 
+//        else 
+//            (xs.[2..] |> Array.choose (fun x -> if x.Length > 3 then Some(x.Substring(4)) else None) |> String.concat "\n")
+//        |> fun x -> x.Trim(' ','\n','\r')
+//        |> fun x -> (x,regexs) ||> Array.fold (fun (x:string) ((r,s):Regex*string) -> r.Replace(x,s))
+//
 
 module List =
     let chop n xs =
@@ -47,7 +52,6 @@ module List =
     let reshape  (shape: int list) (xs: 'a list) : 'a list list =
         (([],xs),shape) ||> List.fold (fun (acc,xs) count -> chop (max count xs.Length) xs |> fun (head,xs) -> (head::acc,xs)) |> fst |> List.rev
 
-let (|Found|_|) map key = map |> Map.tryFind key
 
 module Expr = 
 
@@ -125,6 +129,7 @@ module Expr =
 
     let getCallNames (expr: Expr) = expr |> flatten |> Seq.choose (function | Call(_,m,_) -> Some(m.Name) | _ -> None) |> Set
     let tryFirstCall (expr: Expr) = expr |> flatten |> Seq.tryFind (function | Call(_,_,_) -> true | _ -> false)
+    let firstCall (expr: Expr) = expr |> flatten |> Seq.tryFind (function | Call(_,_,_) -> true | _ -> false) |> Option.get
     let countVar (v: Var) expr = count (function | ShapeVar v2 -> v = v2 | _ -> false) expr
 
     /// This gets the method and makes it generic 
@@ -199,6 +204,18 @@ module ExprTransforms =
                     else Some((ys, body) ||> List.foldBack (fun (v,e,_) body -> Expr.Let(v,e,body)))
             | _ -> None
 
+        let builtIns = function
+            | SpecificCall <@ (|>) @> (None,_,[arg;func]) 
+            | SpecificCall <@ (<|) @> (None,_,[func;arg]) -> Some(Expr.Application(func,arg))
+            | SpecificCall <@ (||>) @> (None,_,[arg1;arg2;func]) 
+            | SpecificCall <@ (<||) @> (None,_,[func;arg1;arg2]) -> Some(Expr.Applications(func,[[arg1];[arg2]]))
+            | SpecificCall <@ (|||>) @> (None,_,[arg1;arg2;arg3;func]) 
+            | SpecificCall <@ (<|||) @> (None,_,[func;arg1;arg2;arg3]) -> Some(<@@ (%%func) %%arg1 %%arg2 %%arg3 @@>) 
+            | SpecificCall <@ id @> (None,_,[arg]) -> Some(arg)
+            | SpecificCall <@ fst @> (None,_,[arg]) -> Some(Expr.TupleGet(arg,0))
+            | SpecificCall <@ snd @> (None,_,[arg]) -> Some(Expr.TupleGet(arg,1))
+            //| SpecificCall <@ ignore @> (None,_,[arg]) -> Some(Expr.Lambda( Value.n)) // Lambda(_arg1, Value (<null>))
+            | _ -> None
 
     /// Combines an array of transform functions and performs the transforms recursively at the same time in the order given
     //let groupUnfold (fs: (Expr -> Expr option)[]) (expr: Expr) =
@@ -378,60 +395,356 @@ module ExprTransforms =
 
 /// This was to make some error messages more readable
 /// The root cause of these errors have been fixed so this is not needed for now
-module ErrorSimplifier = 
-    open FParsec
+//
+//module ErrorSimplifier = 
+//    open FParsec
+//
+//    let identifier =
+//        let isIdentifierFirstChar c = isLetter c || c = '_'
+//        let isIdentifierChar c = isLetter c || isDigit c || c = '_'
+//        many1Satisfy2L isIdentifierFirstChar isIdentifierChar "identifier" .>> spaces
+//
+//    let identifierWithNamespaces : Parser<string list, unit> = 
+//        sepBy1 identifier (pchar '.' <|> pchar '+')
+//
+//    type TypeAST = 
+//        | Base of string list
+//        | Generic of string list * TypeAST list
+//
+//    let pvalue, pvalueRef = createParserForwardedToRef<TypeAST, unit>()
+//
+//    let pbase = identifierWithNamespaces |>> TypeAST.Base
+//
+//    let pgeneric : Parser<TypeAST,unit> = 
+//        identifierWithNamespaces 
+//        .>>. (pchar '`'
+//        >>. pint32
+//        >>. pchar '['
+//        >>. (sepBy1 pvalue (pchar ','))
+//        .>> pchar ']')
+//        |>> fun (x,y) -> TypeAST.Generic(x,y)
+//
+//    do pvalueRef :=  (attempt pgeneric) <|> pbase 
+//
+//    let rec printTypeAst (ast: TypeAST) =
+//        match ast with
+//        | TypeAST.Base(names) ->
+//            match names with 
+//            | ["System";"String"] -> "string"
+//            | ["System";"Int32"] -> "int"
+//            | ["System";"Boolean"] -> "bool"
+//            | ["Microsoft";"FSharp"; "Core"; "Unit"] -> "()"
+//            | _ -> names |> String.concat "\."
+//        | TypeAST.Generic(names,xs) -> 
+//            match names with
+//            | ["FSharp"; "Quotations"; "Evaluator"; "Tools"; "FuncFSharp"] 
+//            | ["Microsoft"; "FSharp"; "Core"; "FSharpFunc"] -> 
+//                xs |> List.map printTypeAst |> String.concat " -> "
+//            | ["System"; "Tuple"] -> 
+//                "(" + (xs |> List.map printTypeAst |> String.concat "*") + ")"
+//            | _ -> (names |> String.concat ".") + "`" + (string xs.Length) + "[" + ((xs |> List.map printTypeAst) |> String.concat ",") + "]"
+//
+//    let processMsg (msg:string) = 
+//        let printErrorMsgAST (xs: Choice<string,TypeAST>[]) = xs |> Array.map (function | Choice1Of2 x -> x | Choice2Of2 x -> sprintf "(%s)" <| printTypeAst x) |> String.concat ""
+//        let tpe = between (pchar '\'') (pchar '\'') pvalue 
+//        let txt = Choice1Of2
+//        let typ = Choice2Of2
+//        let errMsg1 = " cannot be used for parameter of type " |> fun t1 -> ((tpe .>> pstring t1 .>>. tpe ) |>> fun (a,b) -> [|typ a; txt t1; typ b|])
+//        match run (choice [errMsg1]) msg with
+//        | Success(xs,_,_)   -> printErrorMsgAST(xs)
+//        | Failure(errorMsg, _, _) -> failwithf "Failure: %s" errorMsg
+//
 
-    let identifier =
-        let isIdentifierFirstChar c = isLetter c || c = '_'
-        let isIdentifierChar c = isLetter c || isDigit c || c = '_'
-        many1Satisfy2L isIdentifierFirstChar isIdentifierChar "identifier" .>> spaces
 
-    let identifierWithNamespaces : Parser<string list, unit> = 
-        sepBy1 identifier (pchar '.' <|> pchar '+')
 
-    type TypeAST = 
-        | Base of string list
-        | Generic of string list * TypeAST list
+type on = ONNXAPI.ONNX
 
-    let pvalue, pvalueRef = createParserForwardedToRef<TypeAST, unit>()
+type ONNXAPI.ONNX with
+    [<ReflectedDefinition>]
+    static member reshape(x: Tensor<float32>,shape: int32[]) = on.reshape(x,(shape |> Array.map int64).ToTensor())
 
-    let pbase = identifierWithNamespaces |>> TypeAST.Base
+module ExprRun = 
+    [<RequireQualifiedAccess>]
+    type BT = 
+        | Unknown // Tensor without a generic type argument
+        | Float64
+        | Float32
+        | Int64
+        | Int32
+        | Int16
+        | Int8
+        | UInt64
+        | UInt32
+        | UInt16
+        | UInt8
+        static member tryOfType(t: Type) : BT option = 
+            if t = typeof<uint8> then Some BT.UInt8 
+            elif t = typeof<uint16> then Some BT.UInt16 
+            elif t = typeof<uint32> then Some BT.UInt32 
+            elif t = typeof<uint64> then Some BT.UInt64 
+            elif t = typeof<int8> then Some BT.Int8  
+            elif t = typeof<int16> then Some BT.Int16
+            elif t = typeof<int32> then Some BT.Int32 
+            elif t = typeof<int64> then Some BT.Int64 
+            elif t = typeof<float32> then Some BT.Float32 
+            elif t = typeof<double> then Some BT.Float64
+            else None
 
-    let pgeneric : Parser<TypeAST,unit> = 
-        identifierWithNamespaces 
-        .>>. (pchar '`'
-        >>. pint32
-        >>. pchar '['
-        >>. (sepBy1 pvalue (pchar ','))
-        .>> pchar ']')
-        |>> fun (x,y) -> TypeAST.Generic(x,y)
+        member this.ToDataType() = 
+            match this with
+            | BT.Unknown -> failwith "err" // Will probably need to thread through a datatype
+            | BT.Float32 -> DataType.FLOAT32
+            | BT.Float64 -> DataType.DOUBLE
+            | BT.Int64-> DataType.INT64
+            | BT.Int32-> DataType.INT32
+            | BT.Int16 -> DataType.INT16
+            | BT.Int8 -> DataType.INT8
+            | BT.UInt64-> DataType.UINT64
+            | BT.UInt32-> DataType.UINT32
+            | BT.UInt16 -> DataType.UINT16
+            | BT.UInt8 -> DataType.UINT8
 
-    do pvalueRef :=  (attempt pgeneric) <|> pbase 
+    [<RequireQualifiedAccess>]
+    type TT = 
+        | DenseTensor
+        | SparseTensor
+        | Tensor
+        | Unknown
 
-    let rec printTypeAst (ast: TypeAST) =
-        match ast with
-        | TypeAST.Base(names) ->
-            match names with 
-            | ["System";"String"] -> "string"
-            | ["System";"Int32"] -> "int"
-            | ["System";"Boolean"] -> "bool"
-            | ["Microsoft";"FSharp"; "Core"; "Unit"] -> "()"
-            | _ -> names |> String.concat "\."
-        | TypeAST.Generic(names,xs) -> 
-            match names with
-            | ["FSharp"; "Quotations"; "Evaluator"; "Tools"; "FuncFSharp"] 
-            | ["Microsoft"; "FSharp"; "Core"; "FSharpFunc"] -> 
-                xs |> List.map printTypeAst |> String.concat " -> "
-            | ["System"; "Tuple"] -> 
-                "(" + (xs |> List.map printTypeAst |> String.concat "*") + ")"
-            | _ -> (names |> String.concat ".") + "`" + (string xs.Length) + "[" + ((xs |> List.map printTypeAst) |> String.concat ",") + "]"
+    type MM = 
+        | Single of BT * TT
+        | Tuple of MM[]
+        | Record of Type*(Reflection.PropertyInfo*MM)[]
 
-    let processMsg (msg:string) = 
-        let printErrorMsgAST (xs: Choice<string,TypeAST>[]) = xs |> Array.map (function | Choice1Of2 x -> x | Choice2Of2 x -> sprintf "(%s)" <| printTypeAst x) |> String.concat ""
-        let tpe = between (pchar '\'') (pchar '\'') pvalue 
-        let txt = Choice1Of2
-        let typ = Choice2Of2
-        let errMsg1 = " cannot be used for parameter of type " |> fun t1 -> ((tpe .>> pstring t1 .>>. tpe ) |>> fun (a,b) -> [|typ a; txt t1; typ b|])
-        match run (choice [errMsg1]) msg with
-        | Success(xs,_,_)   -> printErrorMsgAST(xs)
-        | Failure(errorMsg, _, _) -> failwithf "Failure: %s" errorMsg
+
+    let createFromTensor = Expr.tryGetGenericMethod <@@ NamedOnnxValue.CreateFromTensor @@> |> Option.get
+    let getArray = <@ [|0|].[0] @> |> Expr.tryGetGenericMethod |> Option.get
+    let unboxGeneric = <@@ unbox<_> @@> |> Expr.tryGetGenericMethod |> Option.get
+    let astensor = <@ (obj() :?> NamedOnnxValue).AsTensor<int>() @> |> Expr.tryGetGenericMethod |> Option.get
+
+    let rec getMM (t:Type) : MM = 
+        if  t = typedefof<Tensor> then MM.Single(BT.Unknown,TT.Unknown)
+        elif FSharpType.IsTuple t then
+            MM.Tuple(FSharpType.GetTupleElements(t) |> Array.map getMM)
+        elif FSharpType.IsRecord t then
+            MM.Record(t,FSharpType.GetRecordFields(t) |> Array.map (fun pi -> pi, pi.PropertyType  |> getMM))
+        elif t.IsGenericType then
+            match BT.tryOfType(t.GetGenericArguments().[0]) with
+            | Some(x) -> 
+                let gtd = t.GetGenericTypeDefinition()
+                if gtd = typedefof<Tensor<_>>  then Single(x,TT.Tensor)
+                elif gtd = typedefof<DenseTensor<_>> then Single(x,TT.DenseTensor)
+                else failwithf "type %s is unsupported" t.FullName
+            | None -> failwithf "generic type argument %s is unsupported" (t.GetGenericArguments().[0].FullName)
+        else
+            failwithf "Type %s is unsupported" t.FullName
+
+    let rec getValueInfo(index:int, mm:MM) : (int*ValueInfo[]) = 
+        let f (index,xs) = 
+            ((index,[]),xs ) 
+            ||> Array.fold (fun (index,acc) x -> getValueInfo(index,x) |> fun (i,x) -> (i,x ::acc))
+            |> fun (i,xs) -> (i,xs |> List.toArray |> Array.collect id)
+        match mm with
+        | Single(bt,_) -> (index+1,[|{name = sprintf "Input%i" index; dt = bt.ToDataType()}|])
+        | MM.Tuple(xs) -> f (index,xs) 
+        | MM.Record(_,xs) -> f (index,xs |> Array.map snd)
+
+    // NOTE: Deeply nested structures here would be marginally more performant
+    // NOTE: wrap in a Lambda expression and cast and compile into a function
+    // Alternatively do common expression elimination
+    let rec getNamedValues(index:int, value: Expr, mm:MM) : (int*Expr<NamedOnnxValue>[]) = 
+            match mm with
+            | MM.Single(bt,_) ->
+                let m = createFromTensor.MakeGenericMethod(bt.ToDataType() |> tryDataTypeToType |> Option.get)
+                // NOTE: May have to add a cast here... if DenseTensor
+                (index+1,[|Expr.Call(m,[Expr.Value(sprintf "Input%i" index); value ]) |> Expr.Cast<NamedOnnxValue>|])
+            | MM.Tuple(xs) -> 
+                ((index,[]),xs |> Array.indexed) 
+                ||> Array.fold (fun (index,acc) (i,x) -> getNamedValues(index, Expr.TupleGet(value,i), x) |> fun (i,x) -> (i,x ::acc))
+                |> fun (i,xs) -> (i,xs |> List.toArray |> Array.collect id)
+            | MM.Record(_,xs) -> 
+                ((index,[]),xs) 
+                ||> Array.fold (fun (index,acc) (pi,x) -> getNamedValues(index, Expr.PropertyGet(value,pi,[]), x) |> fun (i,x) -> (i,x ::acc))
+                |> fun (i,xs) -> (i,xs |> List.toArray |> Array.collect id)
+
+    let rec combineResult(index:int, value: Expr, mm:MM) : (int*Expr) =
+            match mm with
+            | MM.Single(bt,tt) ->
+                if bt = BT.Unknown then failwith "unsupported"
+                match tt with
+                | TT.SparseTensor -> failwith "unsupported"
+                | TT.Unknown -> failwith "unsupported"
+                | TT.Tensor -> 
+                    //let m = getArray.MakeGenericMethod(typedefof<Tensor<_>>.MakeGenericType()
+                    let mt = astensor.MakeGenericMethod(bt.ToDataType() |> tryDataTypeToType |> Option.get)
+                    (index+1,Expr.Call(mt,[Expr.Call(getArray.MakeGenericMethod(typeof<NamedOnnxValue>),[value; Expr.Value(index)])]))
+                | TT.DenseTensor -> 
+                    let t = bt.ToDataType() |> tryDataTypeToType |> Option.get
+                    let mt = astensor.MakeGenericMethod(t)
+                    (index+1,Expr.Call(unboxGeneric.MakeGenericMethod(typedefof<DenseTensor<_>>.MakeGenericType(t)), [Expr.Call(Expr.Call(getArray.MakeGenericMethod(typeof<NamedOnnxValue>),[value; Expr.Value(index)]),mt,[])]))
+            | MM.Tuple(xs) -> 
+                ((index,[]),xs) 
+                ||> Array.fold (fun (index,acc) x -> combineResult(index, value, x) |> fun (i,x) -> (i,x ::acc))
+                |> fun (i,xs) -> (i,Expr.NewTuple(xs |> List.rev))
+            | MM.Record(t,xs) -> 
+                ((index,[]),xs) 
+                ||> Array.fold (fun (index,acc) (_,x) -> combineResult(index, value, x) |> fun (i,x) -> (i,x ::acc))
+                |> fun (i,xs) -> (i, Expr.NewRecord(t, xs |> List.rev))
+
+module ExprGraph = 
+    open FSharp.Quotations.Evaluator
+    open Microsoft.FSharp.Quotations
+    open Microsoft.FSharp.Quotations.Patterns
+    open Microsoft.FSharp.Quotations.DerivedPatterns
+    open Microsoft.FSharp.Quotations.ExprShape
+    open Microsoft.ML.OnnxRuntime.Tensors
+    open Onnx
+    open ProtoBuf
+    open System
+    open System.IO
+    open Microsoft.FSharp.Reflection
+
+    let filterMethods (m: Reflection.MethodInfo) =
+        match m.Name with
+        | "Equals"
+        | "GetHashCode"
+        | "GetType"
+        | "ToString" -> false
+        | _ -> true
+
+    let onMethods = 
+        typeof<on>.GetMethods() 
+        |> Array.filter filterMethods
+
+    let targetMethods = 
+        typeof<ONNXAPIGraph.ONNXGraph>.GetMethods() 
+        |> Array.filter filterMethods
+        |> Array.map (fun mi -> mi.Name,mi)
+        |> Map.ofArray
+
+    let constantFunction = 
+        typeof<Constants>.GetMethods() 
+        |> Array.filter filterMethods
+        |> Array.map (fun mi -> (mi.GetParameters().[1].ParameterType.FullName,mi)) 
+        |> Map.ofArray
+
+    let ONNXAPIFullName = typeof<ONNXAPI.ONNX>.FullName
+    let ONNXAPIGraphFullName = typeof<ONNXAPIGraph.ONNXGraph>.FullName
+
+    let whiteListNamespaces =
+        [|
+            ONNXAPIFullName
+            //"Microsoft.FSharp.Core.Operators"
+            "Microsoft.FSharp.Core"
+            "Microsoft.FSharp.Collections.ArrayModule"
+        |]
+
+    // NOTE: Only support certain types for now
+    let suportedBaseTypes = 
+        [|
+            typeof<Tensor<int>>
+            typeof<Tensor<int64>>
+            typeof<Tensor<float32>>
+            typeof<Tensor<double>>
+        |]
+
+
+    module Option =
+        let all (xs: #seq<'a option>) = 
+            let xs = xs |> Seq.toArray
+            let ys = xs |> Array.choose id
+            if xs.Length = ys.Length then Some(ys) else None
+
+
+    let rec mapType  (t:Type) : Type option = 
+        let f (xs: Type[]) = xs |> Array.map mapType |> Option.all
+        if t.IsArray then
+            t.GetElementType() |> mapType |> Option.map (fun t2 -> t2.MakeArrayType())
+        elif t |> FSharpType.IsTuple then
+            t |> FSharpType.GetTupleElements |> f |> Option.map (fun xs -> FSharpType.MakeTupleType xs)
+        elif FSharpType.IsUnion t || FSharpType.IsRecord t then
+            t.GetGenericArguments() |> f |> Option.map (fun xs -> t.GetGenericTypeDefinition().MakeGenericType(xs))
+        elif suportedBaseTypes |> Array.exists (fun x -> x.IsAssignableFrom(t)) then
+            Some(typeof<ValueInfo>)
+        else
+            None
+
+    let isWhitelist (t:Type) = t.FullName |> fun fn -> whiteListNamespaces |> Array.exists (fn.StartsWith)
+
+    let tryMapUnionCaseInfo (uci:UnionCaseInfo) = 
+        uci.DeclaringType.GenericTypeArguments 
+        |> Array.map mapType 
+        |> Option.all 
+        |> Option.map (fun ts -> 
+            uci.DeclaringType.GetGenericTypeDefinition().MakeGenericType(ts) |> FSharpType.GetUnionCases 
+            |> Seq.find (fun x -> x.Tag = uci.Tag))
+
+    // TODO, change tryAssignable to support structual typing
+    let tryAssignable (t:Type) = suportedBaseTypes |> Array.tryFind (fun x -> x.IsAssignableFrom(t))
+
+    let mapVar (v1:Var) = 
+            match mapType(v1.Type) with 
+            | Some(t) -> Var(v1.Name,t)
+            | None -> v1 //failwithf "Var %s has type %s which is not mappable" v1.Name v1.Type.FullName
+
+    module Map =
+        let addRange (xs:#seq<'a*'b>) (map: Map<'a,'b>)  =
+            xs |> Seq.fold (fun (map: Map<'a,'b>) (v1,v2) -> map.Add(v1,v2)) map
+
+    type Expr with
+        static member Call(instanceO : Expr option, mi : Reflection.MethodInfo, args: Expr list) = 
+            match instanceO with | Some(x) -> Expr.Call(x,mi,args) | None -> Expr.Call(mi,args)
+
+    let processExpr (graphExpr:Expr<Graph>) (expr: Expr) : Expr = 
+        let rec processExpr (varMap: Map<Var,Var>) (expr: Expr) : Expr = 
+            match expr with
+            | NewUnionCase (uci,args) ->
+                match tryMapUnionCaseInfo uci with
+                | Some(uci) -> Expr.NewUnionCase(uci, args |> List.map (processExpr varMap))
+                | None -> failwithf "Unable to process union type %A" uci
+            | Var v -> match varMap.TryFind(v) with | Some(v) -> Expr.Var(v) | _ -> failwithf "Var %s not found %s" v.Name v.Type.FullName
+            | VarSet(v1,body) -> v1 |> mapVar |> fun v2 -> Expr.VarSet(v2, processExpr (varMap.Add(v1,v2)) body)
+            | Lambda(v1,body) -> v1 |> mapVar |> fun v2 -> Expr.Lambda(v2, processExpr (varMap.Add(v1,v2)) body)
+            | Let(v1,exp1,exp2) -> v1 |> mapVar |> fun v2 -> Expr.Let(v2, processExpr varMap exp1, processExpr (varMap.Add(v1,v2)) exp2)
+            | LetRecursive(xs,body) ->  
+                let (es, vs1,vs2) = xs |> List.map fst |> fun x -> (xs |> List.map (snd >> processExpr varMap),x,x |> List.map mapVar)
+                Expr.LetRecursive((vs2,es) ||> List.zip, body |> processExpr (varMap |> Map.addRange ((vs1,vs2) ||> List.zip)))
+            | FieldGet (_,v) as expr ->
+                match tryAssignable v.FieldType with
+                | Some(u) -> Expr.Call(constantFunction.[u.FullName],[graphExpr; expr])
+                | None -> failwithf "Unsupported FieldGet %A as type is not assignable to a supported type" expr
+            | Call(_,mi,_) when mi.Name = "constant"-> failwith "we should have aborted progress before here, TODO remove this later"
+            | Coerce (_,t) -> 
+                match tryAssignable t with
+                | Some(u) -> Expr.Call(constantFunction.[u.FullName],[graphExpr; expr]) 
+                | None -> failwithf "Unsupported Coercions %A as type is not assignable to a supported type" expr
+            | Call(instanceO,mi,args) as expr ->
+                if isWhitelist mi.DeclaringType then
+                    if mi.DeclaringType.FullName = ONNXAPIGraphFullName then
+                        failwithf "Graph member %s should not have been found at this stage" mi.Name
+                    elif mi.DeclaringType.FullName = ONNXAPIFullName then
+                        match targetMethods.TryFind(mi.Name) with
+                        | Some(targetMethod) -> 
+                            let ys = 
+                                targetMethod.GetParameters().[1..] 
+                                |> Array.map (fun x -> x.ParameterType = typeof<ValueInfo> || x.ParameterType = typeof<ValueInfo option>)
+                                |> Array.toList
+                            let args = graphExpr.Raw :: ((ys,args) ||> List.zip |> List.map (fun (y,x) -> if y then processExpr varMap x else x))
+                            Expr.Call(instanceO,targetMethod, args)
+                        | None -> failwithf "Unsupported %s method %s" ONNXAPIFullName mi.Name
+                    else 
+                        match mi.GetGenericArguments() |> Array.map  mapType |> Option.all with
+                        | Some(ts) -> 
+                            let mi' = mi.GetGenericMethodDefinition().MakeGenericMethod(ts)
+                            Expr.Call(instanceO,mi',args |> List.map (processExpr varMap))
+                        | None -> failwithf "Method with unsupported type %A" expr
+                else
+                    match tryAssignable mi.DeclaringType with
+                    | None -> failwithf "Unsupported type %s; it is neither whitelist or assignable to a supported tensor" mi.DeclaringType.FullName
+                    | Some (u) -> Expr.Call(constantFunction.[u.FullName],[graphExpr; expr])
+            | ShapeVar _ -> failwithf "ShapeVar %A" expr
+            | ShapeLambda (v, expr) -> failwithf "ShapeLamda %A" expr
+            | ShapeCombination (o, xs) -> RebuildShapeCombination (o, xs |> List.map (processExpr varMap))
+        processExpr Map.empty expr 
+
+
