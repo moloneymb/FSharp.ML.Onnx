@@ -6,6 +6,9 @@ open ProtoBuf
 open System
 open System.IO
 open Microsoft.ML.OnnxRuntime
+open Microsoft.FSharp.Quotations
+open Common
+open ExprGraph
 
 type on = ONNXAPI.ONNX
 
@@ -99,6 +102,23 @@ module FullModel =
                 ||> Array.zip
                 |> Array.sumBy (fun (x,y) -> System.Math.Abs(x-y))
             if diff > 0.1f then failwithf "Unexpected result in example %i with a difference of %f" index diff
+
+    let testModel2(f: Tensor<float32> -> DV<Tensor<float32>>) = 
+        let test_data = 
+            let f(path: string) = 
+                TensorProto.Parser.ParseFrom(File.ReadAllBytes(path))
+            [| for i in [0;1;2] ->
+                    Path.Combine(mnistDir,sprintf "test_data_set_%i" i) 
+                    |> fun dir -> (f(Path.Combine(dir,"input_0.pb")),f(Path.Combine(dir,"output_0.pb")))|]
+        for (index,(input,output)) in test_data |> Array.indexed do
+            use values2 = f(Tensor.FromTensorProtoFloat32(input)) 
+            let ys = values2.F |> Seq.toArray
+            let diff = 
+                (ys, Tensor.FromTensorProtoFloat32(output) |> Seq.toArray)
+                ||> Array.zip
+                |> Array.sumBy (fun (x,y) -> System.Math.Abs(x-y))
+            if diff > 0.1f then failwithf "Unexpected result in example %i with a difference of %f" index diff
+            printfn "%f %A" diff ys
 
 
     [<Test>]
@@ -319,6 +339,14 @@ module FullModel =
             let constant (x:Tensor<float32>) = Constants.constant(graph,x)
             ong.add(graph, ong.mat_mul(graph, ong.reshape(graph, (this.Rec (graph, this.Rec(graph, x,constant p5,constant p6,2L),constant p87,constant p88,3L)),Constants.constant(graph,[|1L;256L|].ToTensor())),ong.reshape(graph,constant p193,Constants.constant(graph,[|256L;10L|].ToTensor()))),constant p194)
 
+        [<ReflectedDefinition>]
+        member this.Rec(x:Tensor<float32>,p1,p2,k) = 
+           on.max_pool(on.relu(on.add(on.conv(x,p1,auto_pad = "SAME_UPPER"),p2)),kernel_shape = [|k;k|], strides = [|k;k|]) |> fst
+
+        [<ReflectedDefinition>]
+        member this.Forward(x: Tensor<float32>) = 
+            on.add(on.mat_mul(on.reshape((this.Rec (this.Rec(x,p5,p6,2L),p87,p88,3L)),[|1;256|]),on.reshape(p193,[|256;10|])),p194)
+
     [<Test>]
     let ``full mnist``() = 
 
@@ -336,6 +364,34 @@ module FullModel =
         gp.Output.Add(makeValueInfoProto(output))
         gp.Node.Add(graph.ops)
         testModel(writeModelToStream(gp |> graphToModel))
+
+    [<Test>]
+    let ``converted graph``() = 
+        let mnistG = MNISTGraph()
+        use graphFunction : DV<Tensor<float32> -> DV<Tensor<float32>>> = Foo.wrapGraph(<@ mnistG.Forward @>)
+        testModel2(graphFunction.F)
+        testModel2(fun x -> new DV(mnistG.Forward(x),(fun () -> ())))
+        
+    type RecA = {a:Tensor<float32>;b:Tensor<float32>}
+    type RecB = {a:Tensor<float32>;b:RecA; c:Tensor<float32>*Tensor<float32>}
+
+    [<Test>]
+    let ``complex input and output``() = 
+        let tupleFunction = <@ fun (x:Tensor<float32>,y:Tensor<float32>) -> (on.add(x,y),on.sub(x,y),on.log(x)) @>
+        let recFunction = <@ fun (x:RecA,y:Tensor<float32>) -> {a=x.a;b=x.b},{a = on.add(x.a,x.b); b = x; c = (x.a,x.b)} @>
+        use ff : DV<RecA*Tensor<float32> -> DV<RecA*RecB>> = Foo.wrapGraph(recFunction)
+        let p1 = [|0.1f|].ToTensor() :> Tensor<float32>
+        let x = ({a=p1;b=p1},p1)
+        use y = ff.F(x)
+        failwith "todo"
+
+//let p1 = [|0.1f|].ToTensor() :> Tensor<float32>
+//let x = ({a=p1;b=p1},p1)
+
+
+//let mnist = MNIST()
+//testModel(<@ mnist.Forward @>)
+//let ff23 : DV<Tensor<float32> -> DV<Tensor<float32>>> = wrapGraph(<@ mnist.Forward @>)
 
 
 module ONNXExample = 

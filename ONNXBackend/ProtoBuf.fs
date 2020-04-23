@@ -79,6 +79,8 @@ let tryDataTypeToType (x:DataType) =
     | _ -> None
 
 type DV<'a>(f : 'a, dispose : unit -> unit) =
+    // Put a guard around dispose
+    //failwith "todo, put a disposable guard here"
     member this.F = f
     member this.Dispose() = (this :> IDisposable).Dispose()
     interface IDisposable with

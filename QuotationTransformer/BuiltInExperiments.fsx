@@ -43,33 +43,6 @@ let builtInMap =
     |> Array.filter (fun x -> match x.Name with | "GetType" | "get_t" | "ToString" | "GetHashCode" | "Equals" -> false | _ -> true)
     |> Array.choose (fun x -> Expr.TryGetReflectedDefinition (x) |> Option.map (fun y -> x.Name, y)) |> Map.ofArray
 
-
-//let (|BuiltIn|_|) (table: Map<string,Expr>) (mi: MethodInfo)  = table.TryFind(mi.Name)
-
-//builtInMap |> Map.toArray |> Array.map fst
-
-//let t = 
-//    match builtInMap.TryFind("op_PipeRight").Value with
-//    | Lambda(a,Lambda(b,Application (c, d))) -> a.Type //(a.Type.Name,b.Type.Name, c.Type.Name, d.Type.Name)
-//    | _ -> failwith "err"
-
-//Expr.Cast(builtInMap.TryFind("op_PipeRight")
-
-//(builtInMap.TryFind("op_PipeRight").Value |> Expr.getVarsUsage |> Array.item 1).Type
-//(builtInMap.TryFind("op_PipeRight").Value |> Expr.getVarsUsage |> Array.item 0).Type
-
-//match <@@ (|>) @@> with
-//| Lambda(a, Lambda(b, _)) -> (a.Type.Name, b.Type.Name)
-//| _ -> failwith "err"
-//
-//match <@@ (|>) @@> with
-//| Lambda(a,Lambda(b,Application (c, d))) -> a.Type.Name
-//| _ -> failwith "err"
-//let f (mi:MethodInfo) =  builtInMap.TryFind(mi.Name)
-
-//module Option =
-//    let toNone _ = None
-
 let expand (g: MethodInfo -> Expr option) (expr: Expr) = 
     let f ((instanceO : Expr option),(yss:Var list list),rd, zs) =
         // Reshape will stop short of filling new 'shape' when there are not enough elements

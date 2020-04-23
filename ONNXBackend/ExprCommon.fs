@@ -15,6 +15,12 @@ open System.Text.RegularExpressions
 let (|TryFunc|_|) (f: 'a -> 'b option ) (x:'a) = f x
 let (|Found|_|) map key = map |> Map.tryFind key
 
+module Option =
+    let all (xs: #seq<'a option>) = 
+        let xs = xs |> Seq.toArray
+        let ys = xs |> Array.choose id
+        if xs.Length = ys.Length then Some(ys) else None
+
 //open Fantomas
 //let private regexs = [| Regex(@"Operators\.string\<[_A-Za-z0-9]*\>"), "string"; Regex(@"\(unitVar[0-9]* : Unit\)"), "()" |]
 //
@@ -145,6 +151,15 @@ module Expr =
         |> Seq.tryLast 
         |> Option.defaultValue expr
 
+
+    // TODO better name
+    let merge<'a>(xs: Expr list) = Expr.Cast<'a[]>(Expr.NewArray(typeof<'a>, xs))
+
+    let applyTransforms (fs:(Expr -> Expr option)[])  = 
+        let cmb (fs:(Expr -> Expr option)[]) (expr: Expr) = 
+            seq { for f in fs do match f expr with | Some(x) -> yield x | _ -> ()} |> Seq.tryHead
+        applyTransform (cmb fs)
+
 type Expr with
     member this.TryGetLocation() =
         this.CustomAttributes 
@@ -204,6 +219,7 @@ module ExprTransforms =
                     else Some((ys, body) ||> List.foldBack (fun (v,e,_) body -> Expr.Let(v,e,body)))
             | _ -> None
 
+        /// NOTE find out if this style of SpecificCall is slow
         let builtIns = function
             | SpecificCall <@ (|>) @> (None,_,[arg;func]) 
             | SpecificCall <@ (<|) @> (None,_,[func;arg]) -> Some(Expr.Application(func,arg))
@@ -217,6 +233,18 @@ module ExprTransforms =
             //| SpecificCall <@ ignore @> (None,_,[arg]) -> Some(Expr.Lambda( Value.n)) // Lambda(_arg1, Value (<null>))
             | _ -> None
 
+        let selfMatch (expr: Expr) = 
+            match expr with
+            //| Lambda(v1,Var(v2)) when v1 = v2 -> Some(Expr.Var(v1))
+            | NewTuple([]) -> None
+            | NewTuple(xs) ->
+                xs 
+                |> List.map (function | TupleGet(x,i) -> Some(x,i) | _ -> None) 
+                |> Option.all
+                |> Option.bind (fun xs -> 
+                    let isSelf, _ = ((true,0),xs) ||> Array.fold (fun (v,i1) (x,i2) -> (v && i1 = i2 && x = fst xs.[0],i1+1))
+                    if isSelf then Some(fst xs.[0]) else None)
+            | _ -> None
     /// Combines an array of transform functions and performs the transforms recursively at the same time in the order given
     //let groupUnfold (fs: (Expr -> Expr option)[]) (expr: Expr) =
     //    expr |> Expr.unfoldWhileChanged (fun x -> fs |> Seq.choose (fun f -> f(x)) |> Seq.tryHead)
@@ -539,57 +567,19 @@ module ExprRun =
         else
             failwithf "Type %s is unsupported" t.FullName
 
-    let rec getValueInfo(index:int, mm:MM) : (int*ValueInfo[]) = 
-        let f (index,xs) = 
-            ((index,[]),xs ) 
-            ||> Array.fold (fun (index,acc) x -> getValueInfo(index,x) |> fun (i,x) -> (i,x ::acc))
-            |> fun (i,xs) -> (i,xs |> List.toArray |> Array.collect id)
-        match mm with
-        | Single(bt,_) -> (index+1,[|{name = sprintf "Input%i" index; dt = bt.ToDataType()}|])
-        | MM.Tuple(xs) -> f (index,xs) 
-        | MM.Record(_,xs) -> f (index,xs |> Array.map snd)
-
-    // NOTE: Deeply nested structures here would be marginally more performant
-    // NOTE: wrap in a Lambda expression and cast and compile into a function
-    // Alternatively do common expression elimination
-    let rec getNamedValues(index:int, value: Expr, mm:MM) : (int*Expr<NamedOnnxValue>[]) = 
-            match mm with
-            | MM.Single(bt,_) ->
-                let m = createFromTensor.MakeGenericMethod(bt.ToDataType() |> tryDataTypeToType |> Option.get)
-                // NOTE: May have to add a cast here... if DenseTensor
-                (index+1,[|Expr.Call(m,[Expr.Value(sprintf "Input%i" index); value ]) |> Expr.Cast<NamedOnnxValue>|])
-            | MM.Tuple(xs) -> 
-                ((index,[]),xs |> Array.indexed) 
-                ||> Array.fold (fun (index,acc) (i,x) -> getNamedValues(index, Expr.TupleGet(value,i), x) |> fun (i,x) -> (i,x ::acc))
+    let getValueInfo(mm:MM) =
+        let rec getValueInfo(index:int, mm:MM) : (int*ValueInfo[]) = 
+            let f (index,xs) = 
+                ((index,[]),xs ) 
+                ||> Array.fold (fun (index,acc) x -> getValueInfo(index,x) |> fun (i,x) -> (i,x ::acc))
                 |> fun (i,xs) -> (i,xs |> List.toArray |> Array.collect id)
-            | MM.Record(_,xs) -> 
-                ((index,[]),xs) 
-                ||> Array.fold (fun (index,acc) (pi,x) -> getNamedValues(index, Expr.PropertyGet(value,pi,[]), x) |> fun (i,x) -> (i,x ::acc))
-                |> fun (i,xs) -> (i,xs |> List.toArray |> Array.collect id)
-
-    let rec combineResult(index:int, value: Expr, mm:MM) : (int*Expr) =
             match mm with
-            | MM.Single(bt,tt) ->
-                if bt = BT.Unknown then failwith "unsupported"
-                match tt with
-                | TT.SparseTensor -> failwith "unsupported"
-                | TT.Unknown -> failwith "unsupported"
-                | TT.Tensor -> 
-                    //let m = getArray.MakeGenericMethod(typedefof<Tensor<_>>.MakeGenericType()
-                    let mt = astensor.MakeGenericMethod(bt.ToDataType() |> tryDataTypeToType |> Option.get)
-                    (index+1,Expr.Call(mt,[Expr.Call(getArray.MakeGenericMethod(typeof<NamedOnnxValue>),[value; Expr.Value(index)])]))
-                | TT.DenseTensor -> 
-                    let t = bt.ToDataType() |> tryDataTypeToType |> Option.get
-                    let mt = astensor.MakeGenericMethod(t)
-                    (index+1,Expr.Call(unboxGeneric.MakeGenericMethod(typedefof<DenseTensor<_>>.MakeGenericType(t)), [Expr.Call(Expr.Call(getArray.MakeGenericMethod(typeof<NamedOnnxValue>),[value; Expr.Value(index)]),mt,[])]))
-            | MM.Tuple(xs) -> 
-                ((index,[]),xs) 
-                ||> Array.fold (fun (index,acc) x -> combineResult(index, value, x) |> fun (i,x) -> (i,x ::acc))
-                |> fun (i,xs) -> (i,Expr.NewTuple(xs |> List.rev))
-            | MM.Record(t,xs) -> 
-                ((index,[]),xs) 
-                ||> Array.fold (fun (index,acc) (_,x) -> combineResult(index, value, x) |> fun (i,x) -> (i,x ::acc))
-                |> fun (i,xs) -> (i, Expr.NewRecord(t, xs |> List.rev))
+            | Single(bt,_) -> (index+1,[|{name = sprintf "Input%i" index; dt = bt.ToDataType()}|])
+            | MM.Tuple(xs) -> f (index,xs) 
+            | MM.Record(_,xs) -> f (index,xs |> Array.map snd)
+        getValueInfo(0,mm) |> snd
+
+
 
 module ExprGraph = 
     open FSharp.Quotations.Evaluator
@@ -648,14 +638,6 @@ module ExprGraph =
             typeof<Tensor<double>>
         |]
 
-
-    module Option =
-        let all (xs: #seq<'a option>) = 
-            let xs = xs |> Seq.toArray
-            let ys = xs |> Array.choose id
-            if xs.Length = ys.Length then Some(ys) else None
-
-
     let rec mapType  (t:Type) : Type option = 
         let f (xs: Type[]) = xs |> Array.map mapType |> Option.all
         if t.IsArray then
@@ -702,6 +684,8 @@ module ExprGraph =
                 match tryMapUnionCaseInfo uci with
                 | Some(uci) -> Expr.NewUnionCase(uci, args |> List.map (processExpr varMap))
                 | None -> failwithf "Unable to process union type %A" uci
+            | TupleGet(x,i) -> Expr.TupleGet(processExpr varMap x,i)
+            | NewTuple(xs) -> Expr.NewTuple(xs |> List.map (processExpr varMap))
             | Var v -> match varMap.TryFind(v) with | Some(v) -> Expr.Var(v) | _ -> failwithf "Var %s not found %s" v.Name v.Type.FullName
             | VarSet(v1,body) -> v1 |> mapVar |> fun v2 -> Expr.VarSet(v2, processExpr (varMap.Add(v1,v2)) body)
             | Lambda(v1,body) -> v1 |> mapVar |> fun v2 -> Expr.Lambda(v2, processExpr (varMap.Add(v1,v2)) body)
@@ -747,4 +731,232 @@ module ExprGraph =
             | ShapeCombination (o, xs) -> RebuildShapeCombination (o, xs |> List.map (processExpr varMap))
         processExpr Map.empty expr 
 
+    // TODO move and rename
+    // TODO also add some logging to make debugging easier
+    let simplify (expr: Expr) = 
+        expr
+        |> Expr.applyTransform ExprTransforms.expandWithReflectedDefinition
+        |> Expr.applyTransform ExprTransforms.Simple.builtIns
+        |> Expr.applyTransforms 
+            [|
+                ExprTransforms.reduceApplicationsAndLambdas true
+                ExprTransforms.Simple.tuples
+                ExprTransforms.Simple.newTuple
+            |]
+        |> Expr.applyTransform ExprTransforms.Simple.bindings
+        |> Expr.applyTransform ExprTransforms.Simple.selfMatch
+
+
+    // This only supports simple records
+    // TODO: Whitelist records or... Blacklist records?
+    // figure out when to stop applying the transform so that we can continue to use records outside of ONNX Graph API
+    (* (records:Map<string,Reflection.PropertyInfo[]>) (fieldOffsets:Map<string*string,int>) *)
+    // Must also map tuple types
+
+    let rec containsRecord (t:Type) : bool =
+        if FSharpType.IsRecord t then true
+        elif FSharpType.IsTuple t then
+            FSharpType.GetTupleElements t |> Array.exists containsRecord
+        else false
+
+    let rec mapType2 (t:Type) = 
+        if FSharpType.IsRecord t then
+            let fields = FSharpType.GetRecordFields t
+            FSharpType.MakeTupleType(fields |> Array.map (fun x -> x.PropertyType |> mapType2))
+        elif FSharpType.IsTuple t then
+            if not <| containsRecord t then t
+            else 
+                FSharpType.MakeTupleType(t |> FSharpType.GetTupleElements |> Array.map mapType2)
+        else t
+
+    let mapRecordsToTuples(expr:Expr) = 
+        let rec getRecordFields(t:Type) : (string*System.Reflection.PropertyInfo[])[] = 
+            [| 
+                if FSharpType.IsRecord t then 
+                    let fields = FSharpType.GetRecordFields t
+                    yield t.FullName,fields
+                    yield! fields |> Array.collect (fun f -> getRecordFields f.PropertyType)
+                elif FSharpType.IsTuple t then
+                    yield! FSharpType.GetTupleElements t |> Array.collect (fun x -> getRecordFields x)
+            |]
+
+        let mapRecordsToTuples   = 
+                
+            let rec mapRecordsToTuples (vars:Map<Var,Var>) (expr:Expr) = 
+                match expr with
+                | Var(Found vars (v)) -> Some(Expr.Var(v))
+                | Var(v) when containsRecord v.Type -> 
+                    // I'm not sure when this would happen outside of an identiy Expr
+                    Some(Expr.Var(Var(v.Name,mapType2 v.Type,v.IsMutable)))
+                | Let(v,e1,e2) when v.Type |> containsRecord -> 
+                    let v2 = Var(v.Name,mapType2 v.Type)
+                    printfn "Var changed %s %s %s" v.Name v.Type.Name v2.Type.Name
+                    let f e = e |> Expr.applyTransform (mapRecordsToTuples (vars.Add(v,v2)))
+                    Some(Expr.Let(v2, f e1,f e2))
+                | Lambda(v,e) when v.Type |> containsRecord ->
+                    let v2 = Var(v.Name,mapType2 v.Type)
+                    printfn "Var changed %s %s %s" v.Name v.Type.Name v2.Type.Name
+                    Some(Expr.Lambda(v2, e |> Expr.applyTransform (mapRecordsToTuples (vars.Add(v,v2)))))
+                | TupleGet(x,i) -> 
+                    // NOTE: This is needed as the type change needs to be threaded through
+                    x |> Expr.unfoldWhileChanged (mapRecordsToTuples vars) |> Seq.tryLast
+                    |> Option.map (fun x -> Expr.TupleGet(x,i))
+                | NewRecord(_,xs) ->
+                   Some(Expr.NewTuple(xs |> List.map (Expr.applyTransform (mapRecordsToTuples vars)))) 
+                | NewTuple(xs) -> 
+                    // check if any changes were made
+                    let ys = xs |> List.map (fun x -> x |> Expr.unfoldWhileChanged (mapRecordsToTuples vars) |> Seq.tryLast)
+                    if ys |> List.exists Option.isSome then
+                        Some(Expr.NewTuple((xs,ys) ||> List.zip |> List.map (fun (x,y) -> defaultArg y x)))
+                    else
+                        None
+                | PropertyGet(Some(e),propertyInfo,[]) ->
+                    if FSharpType.IsRecord propertyInfo.DeclaringType then
+                        FSharpType.GetRecordFields propertyInfo.DeclaringType 
+                        |> Array.indexed 
+                        |> Array.tryFind (fun (_,x) -> propertyInfo.Name = x.Name )
+                        |> Option.map (fun (i,_) -> Expr.TupleGet(e |> Expr.applyTransform (mapRecordsToTuples vars) ,i))
+                    else
+                        None
+                | _ -> None
+            mapRecordsToTuples Map.empty
+        mapRecordsToTuples expr
+
+open FSharp.Quotations.Evaluator
+open Onnx
+open ExprRun
+module Foo = 
+    let wrapGraph<'a,'b>(expr: Expr<'a -> 'b>)  : DV<'a -> DV<'b>>= 
+        let mmIn = getMM (typeof<'a>)
+        let mmOut = getMM (typeof<'b>)
+        let buildGraph(func: Expr<'a->'b>) (mmIn:MM) (mmOut:MM) : ValueInfo[]*ValueInfo[]*ModelProto =
+            let inputs = getValueInfo(mmIn)
+
+            let assembleInput(value: Expr) (mm:MM) : (Expr) =
+                let getValueInfoFromArray = 
+                    let x = getArray.MakeGenericMethod(typeof<ValueInfo>)
+                    fun index -> Expr.Call(x,[value; Expr.Value(index)])
+                let rec combineValueInfoResult(index:int,  mm:MM) : (int*Expr) =
+                    let f(index,xs) =
+                        ((index,[]),xs) 
+                        ||> Array.fold (fun (index,acc) x -> combineValueInfoResult(index,  x) |> fun (i,x) -> (i,x ::acc))
+                        |> fun (i,xs) -> (i,Expr.NewTuple(xs |> List.rev))
+                    match mm with
+                    | MM.Single(_,_) ->
+                        (index+1,getValueInfoFromArray index)
+                    | MM.Tuple(xs) -> f(index,xs)
+                    | MM.Record(_,xs) -> f(index,xs |> Array.map snd)
+                combineValueInfoResult(0,mm) |> snd
+
+            let flattenOutput(value: Expr, mm:MM) : (Expr<ValueInfo[]>) =
+                let rec trans (expr: Expr) (mm:MM) : Expr[] =
+                    [|
+                        let f(xs:MM[]) = 
+                            xs 
+                            |> Array.mapi (fun i x -> trans (Expr.TupleGet(expr,i)) x)
+                            |> Array.collect id
+                        match mm with
+                        | MM.Single(_) -> yield expr 
+                        | MM.Tuple(xs) -> yield! f(xs)
+                        | MM.Record(_,xs) -> yield! f(xs |> Array.map snd)
+                    |] 
+                trans (value) mm
+                |> List.ofArray
+                |> Expr.merge<ValueInfo>
+
+            let graph = Graph.Default()
+
+            let transformedFunc = 
+                func 
+                |> ExprGraph.simplify 
+                |> Expr.applyTransform  ExprGraph.mapRecordsToTuples 
+                |> ExprGraph.processExpr <@ graph @>
+                |> fun f -> 
+                    // argument type does not match 
+                    let v = Expr.Application(f, assembleInput <@ inputs @> mmIn).EvaluateUntyped()
+                    flattenOutput(Expr.Value(v,v.GetType()),mmOut)
+
+            let outputs = transformedFunc.Evaluate()
+
+            let makeValueInfoProto(valueInfo: ValueInfo) = 
+                ValueInfoProto(Name = valueInfo.name, Type = TypeProto(TensorType = TypeProto.Types.Tensor(ElemType = int32 valueInfo.dt)))
+
+            let gp = GraphProto(Name = "G")
+            gp.Input.Add(inputs |> Array.map makeValueInfoProto)
+            gp.Output.Add(outputs |> Array.map makeValueInfoProto)
+            gp.Node.Add(graph.ops)
+            inputs, outputs, gp |> graphToModel
+
+        let inputs,outputs,model = buildGraph(expr) mmIn mmOut
+        // NOTE: Deeply nested structures here would be marginally more performant
+        // NOTE: wrap in a Lambda expression and cast and compile into a function
+        // Alternatively do common expression elimination
+        let rec getNamedValues(index:int, value: Expr, mm:MM) : (int*Expr<NamedOnnxValue>[]) = 
+                match mm with
+                | MM.Single(bt,_) ->
+                    let m = createFromTensor.MakeGenericMethod(bt.ToDataType() |> tryDataTypeToType |> Option.get)
+                    // NOTE: May have to add a cast here... if DenseTensor
+                    (index+1,[|Expr.Call(m,[Expr.Value(sprintf "Input%i" index); value ]) |> Expr.Cast<NamedOnnxValue>|])
+                | MM.Tuple(xs) -> 
+                    ((index,[]),xs |> Array.indexed) 
+                    ||> Array.fold (fun (index,acc) (i,x) -> getNamedValues(index, Expr.TupleGet(value,i), x) |> fun (i,x) -> (i,x ::acc))
+                    |> fun (i,xs) -> (i,xs |> List.toArray |> Array.collect id)
+                | MM.Record(_,xs) -> 
+                    ((index,[]),xs) 
+                    ||> Array.fold (fun (index,acc) (pi,x) -> getNamedValues(index, Expr.PropertyGet(value,pi,[]), x) |> fun (i,x) -> (i,x ::acc))
+                    |> fun (i,xs) -> (i,xs |> List.toArray |> Array.collect id)
+
+        let rec combineResult(index:int, value: Expr, mm:MM) : (int*Expr) =
+            match mm with
+            | MM.Single(bt,tt) ->
+                if bt = BT.Unknown then failwith "unsupported"
+                match tt with
+                | TT.SparseTensor -> failwith "unsupported"
+                | TT.Unknown -> failwith "unsupported"
+                | TT.Tensor -> 
+                    //let m = getArray.MakeGenericMethod(typedefof<Tensor<_>>.MakeGenericType()
+                    let mt = astensor.MakeGenericMethod(bt.ToDataType() |> tryDataTypeToType |> Option.get)
+                    let x1 = Expr.Call(getArray.MakeGenericMethod(typeof<NamedOnnxValue>),[value; Expr.Value(index)])
+                    let x2 = Expr.Call(x1,mt,[])
+                    (index+1,x2)
+                | TT.DenseTensor -> 
+                    let t = bt.ToDataType() |> tryDataTypeToType |> Option.get
+                    let mt = astensor.MakeGenericMethod(t)
+                    let x1 = Expr.Call(getArray.MakeGenericMethod(typeof<NamedOnnxValue>),[value; Expr.Value(index)])
+                    let x2 = Expr.Call(x1,mt,[])
+                    let x3 = Expr.Call(unboxGeneric.MakeGenericMethod(typedefof<DenseTensor<_>>.MakeGenericType(t)), [x2])
+                    (index+1,x3)
+            | MM.Tuple(xs) -> 
+                ((index,[]),xs) 
+                ||> Array.fold (fun (index,acc) x -> combineResult(index, value, x) |> fun (i,x) -> (i,x ::acc))
+                |> fun (i,xs) -> (i,Expr.NewTuple(xs |> List.rev))
+            | MM.Record(t,xs) -> 
+                ((index,[]),xs) 
+                ||> Array.fold (fun (index,acc) (_,x) -> combineResult(index, value, x) |> fun (i,x) -> (i,x ::acc))
+                |> fun (i,xs) -> (i, Expr.NewRecord(t, xs |> List.rev))
+
+        let sess = new InferenceSession(model |> writeModelToStream)
+
+        let flatten = 
+            let v = Var("x",typeof<'a>)
+            let flatInputs = Expr.Lambda(v,(getNamedValues(0,Expr.Var(v),mmIn) |> snd |> Array.map (fun x -> x.Raw) |> List.ofArray  |> Expr.merge<NamedOnnxValue>)).EvaluateUntyped() :?> 'a -> NamedOnnxValue[]
+            flatInputs
+
+        let cmb = 
+            let v2 = Var("r",typeof<NamedOnnxValue[]>)
+            let r2 = combineResult(0,Expr.Var(v2),mmOut) |> snd
+            Expr.Lambda(v2, r2).EvaluateUntyped() :?> NamedOnnxValue[] -> 'b
+
+        let partialRun (x: 'a ) = 
+            let flatInputs = flatten x
+            let results = sess.Run(flatten x)
+            let results3 = 
+                let mOut = [| for x in results -> (x.Name,x :> NamedOnnxValue)|] |> Map.ofArray 
+                // It appears that inputs that make it to outputs untouched are not initialized
+                // We fix this by short-circuiting
+                let mIn = [| for x in flatInputs -> (x.Name,x)|] |> Map.ofArray 
+                [| for x in outputs -> (mIn.TryFind(x.name) |> Option.defaultValue mOut.[x.name]) |]
+                |> cmb
+            new DV<'b>(results3, fun () ->results.Dispose())
+        new DV<'a -> DV<'b>> (partialRun, fun () -> sess.Dispose())
 

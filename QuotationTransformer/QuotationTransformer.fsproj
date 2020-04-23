@@ -5,10 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="T.fsx" />
-    <None Include="Base.fsx" />
-    <None Include="ONNXScratch3.fsx" />
-    <None Include="ExprRun.fsx" />
     <None Include="BuiltInExperiments.fsx" />
     <Compile Include="Common.fs" />
     <Compile Include="Transformer.fs" />
