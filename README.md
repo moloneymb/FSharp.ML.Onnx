@@ -7,11 +7,15 @@ This repository is for experimenting with building an ONNX Backend. The API will
 *	Create and execute MNist composed out of single op graphs (paused)
 *	Protobuf interface for F# code generator (abandoned)
 *	C++ wrapper interface (in-progress)
-*	Python code generator for F# API ops (in-progress)
+*	Python code generator for F# API ops (done - mostly)
 
 ## Phase 2 Graph Execution
-*	Object model for ONNX metadata (in-progress)
-*	Quotation transform (not-started)
+*	Object model for ONNX metadata (done)
+*	Quotation transform (done)
+*	Simple structual types (done)
+
+## Phase 3 Analyzer
+*	Limit F# code at design time to ensure possilbe ONNX conversion
 
 ## Other
 *	Use the ONNX library to resolve shapes for shape checking
