@@ -15,6 +15,7 @@ type on = ONNXAPI.ONNX
 [<AutoOpen>]
 module X = 
     type ONNXAPI.ONNX with
+        [<ReflectedDefinition>]
         static member reshape(x: Tensor<float32>,shape: int32[]) = on.reshape(x,(shape |> Array.map int64).ToTensor())
 
 module MiniGraphs = 
@@ -370,7 +371,7 @@ module FullModel =
         let mnistG = MNISTGraph()
         use graphFunction : DV<Tensor<float32> -> DV<Tensor<float32>>> = Foo.wrapGraph(<@ mnistG.Forward @>)
         testModel2(graphFunction.F)
-        testModel2(fun x -> new DV(mnistG.Forward(x),(fun () -> ())))
+        testModel2(fun x -> new DV<Tensor<float32>>(mnistG.Forward(x),(fun () -> ())))
         
     type RecA = {a:Tensor<float32>;b:Tensor<float32>}
     type RecB = {a:Tensor<float32>;b:RecA; c:Tensor<float32>*Tensor<float32>}
@@ -383,7 +384,9 @@ module FullModel =
         let p1 = [|0.1f|].ToTensor() :> Tensor<float32>
         let x = ({a=p1;b=p1},p1)
         use y = ff.F(x)
-        failwith "todo"
+        let r1 = (fst y.F).a.ToArray() 
+        let diff = (p1.ToArray(),r1) ||> Array.zip |> Array.sumBy (fun (x,y) -> System.Math.Abs(x-y))
+        if diff > 0.1f then failwith "Error running function"
 
 //let p1 = [|0.1f|].ToTensor() :> Tensor<float32>
 //let x = ({a=p1;b=p1},p1)

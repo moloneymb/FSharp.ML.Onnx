@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Base.fsx" />
     <None Include="BuiltInExperiments.fsx" />
     <Compile Include="Common.fs" />
     <Compile Include="Transformer.fs" />
