@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net47</TargetFramework>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -10,16 +10,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Utils.fs" />
+    <Compile Include="Utils.Expr.fs" />
+    <Compile Include="Onnx.Protobuf.fs" />
+    <Compile Include="Onnx.API.PascalCase.fs" />
+    <Compile Include="Onnx.API.SnakeCase.fs" />
+    <Compile Include="Onnx.API.Graph.fs" />
+    <Compile Include="Onnx.Expr.fs" />
+    <Compile Include="Onnx.Extensions.fs" />
     <None Include="onnx_code_gen.py" />
-    <None Include="onnx_obj_model_code_gen.py" />
     <None Include="onnx_schema.proto3" />
+    <None Include="onnx_obj_model_code_gen.py" />
     <None Include="SetupNotes.md" />
     <None Include="CodeGen.fsx" />
-    <Compile Include="ProtoBuf.fs" />
-    <Compile Include="ONNXAPI.g.fs" />
-    <Compile Include="ONNXAPIGraph.g.fs" />
-    <Compile Include="ExprCommon.fs" />
-    <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>

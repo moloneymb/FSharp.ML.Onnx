@@ -1,16 +1,12 @@
-﻿module ProtoBuf
+﻿module FSharp.ML.Onnx.Protobuf
 
-open System
+// These are helper functions that are used by the generated code
 open System.Text
 open System.IO
 open Onnx
 open Google.Protobuf.Collections
 open Microsoft.ML.OnnxRuntime.Tensors
 open Microsoft.ML.OnnxRuntime
-
-
-type 'a``[]`` with
-    member x.ToTensor() = ArrayTensorExtensions.ToTensor(x)
 
 type Tensor<'a> with
     member this.ToArray() = this.ToDenseTensor().Buffer.ToArray()
@@ -77,14 +73,6 @@ let tryDataTypeToType (x:DataType) =
     | DataType.COMPLEX128 ->Some typeof<System.Numerics.Complex> 
     | DataType.BFLOAT16 -> None
     | _ -> None
-
-type DV<'a>(f : 'a, dispose : unit -> unit) =
-    // Put a guard around dispose
-    //failwith "todo, put a disposable guard here"
-    member this.F = f
-    member this.Dispose() = (this :> IDisposable).Dispose()
-    interface IDisposable with
-        member this.Dispose() = dispose()
 
 type Attr() =
     static member float(name: string, value: float32) = 
@@ -263,7 +251,6 @@ let execNodeCheck<'a> (opName: string) (inputs: (NamedOnnxValue*ValueInfoProto)[
     use sess = miniGraph(opName, inputs,[|"O1", dt|],attrs)
     use res = sess.Run(inputs |> Array.map fst)
     res |> Seq.head |> fun x -> x.AsTensor<'a>().Clone()
-    
 
 let execNodeTuple2<'a,'b> (opName: string) (inputs: (NamedOnnxValue*ValueInfoProto)[]) (attrs: AttributeProto[]) : (Tensor<'a>*Tensor<'b>) =
     let outputNames = [|
@@ -353,5 +340,4 @@ type Constants() =
 
     static member constant(graph: Graph, t: Tensor<int64>) : ValueInfo =
         graph.AddNode("Constant", [||], [|DataType.INT64|],[|Attr.tensor(t)|]).[0]
-
 

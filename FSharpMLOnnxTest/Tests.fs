@@ -1,22 +1,19 @@
-namespace Test
+namespace Tests
 open Microsoft.ML.OnnxRuntime.Tensors
 open NUnit.Framework
 open Onnx
-open ProtoBuf
+open FSharp.ML.Onnx.Protobuf
 open System
 open System.IO
 open Microsoft.ML.OnnxRuntime
 open Microsoft.FSharp.Quotations
-open Common
-open ExprGraph
+open FSharp.ML.Onnx.Utils
+open FSharp.ML.Onnx.Utils.Expr
+open FSharp.ML.Onnx.Expr
+open FSharp.ML.Onnx.Extensions
 
-type on = ONNXAPI.ONNX
-
-[<AutoOpen>]
-module X = 
-    type ONNXAPI.ONNX with
-        [<ReflectedDefinition>]
-        static member reshape(x: Tensor<float32>,shape: int32[]) = on.reshape(x,(shape |> Array.map int64).ToTensor())
+type on = FSharp.ML.Onnx.API.SnakeCase.Onnx
+type DV<'a> = DisposableValue<'a>
 
 module MiniGraphs = 
     let input1 = ArrayTensorExtensions.ToTensor(Array2D.create 1 32 2.f) :> Tensor<float32>
@@ -113,7 +110,7 @@ module FullModel =
                     |> fun dir -> (f(Path.Combine(dir,"input_0.pb")),f(Path.Combine(dir,"output_0.pb")))|]
         for (index,(input,output)) in test_data |> Array.indexed do
             use values2 = f(Tensor.FromTensorProtoFloat32(input)) 
-            let ys = values2.F |> Seq.toArray
+            let ys = values2.Value |> Seq.toArray
             let diff = 
                 (ys, Tensor.FromTensorProtoFloat32(output) |> Seq.toArray)
                 ||> Array.zip
@@ -311,7 +308,7 @@ module FullModel =
             let diff = (y2.ToArray(),y1) ||> Array.zip |> Array.sumBy (fun (x,y) -> System.Math.Abs(x-y))
             if diff > 0.1f then failwithf "Unexpected result in example %i with a difference of %f" index diff
 
-    type ong = ONNXAPIGraph.ONNXGraph
+    type ong = FSharp.ML.Onnx.API.Graph.OnnxGraph
 
     type MNISTGraph() = 
 
@@ -333,12 +330,12 @@ module FullModel =
 
         [<ReflectedDefinition>]
         member this.Rec(graph:Graph, x:ValueInfo,p1,p2,k) = 
-           ong.max_pool(graph,ong.relu(graph,ong.add(graph,ong.conv(graph,x,p1,auto_pad = "SAME_UPPER"),p2)),kernel_shape = [|k;k|], strides = [|k;k|]) |> fst
+           ong.MaxPool(graph,ong.Relu(graph,ong.Add(graph,ong.Conv(graph,x,p1,auto_pad = "SAME_UPPER"),p2)),kernel_shape = [|k;k|], strides = [|k;k|]) |> fst
 
         [<ReflectedDefinition>]
         member this.Forward(graph: Graph, x: ValueInfo) = 
             let constant (x:Tensor<float32>) = Constants.constant(graph,x)
-            ong.add(graph, ong.mat_mul(graph, ong.reshape(graph, (this.Rec (graph, this.Rec(graph, x,constant p5,constant p6,2L),constant p87,constant p88,3L)),Constants.constant(graph,[|1L;256L|].ToTensor())),ong.reshape(graph,constant p193,Constants.constant(graph,[|256L;10L|].ToTensor()))),constant p194)
+            ong.Add(graph, ong.MatMul(graph, ong.Reshape(graph, (this.Rec (graph, this.Rec(graph, x,constant p5,constant p6,2L),constant p87,constant p88,3L)),Constants.constant(graph,[|1L;256L|].ToTensor())),ong.Reshape(graph,constant p193,Constants.constant(graph,[|256L;10L|].ToTensor()))),constant p194)
 
         [<ReflectedDefinition>]
         member this.Rec(x:Tensor<float32>,p1,p2,k) = 
@@ -346,7 +343,9 @@ module FullModel =
 
         [<ReflectedDefinition>]
         member this.Forward(x: Tensor<float32>) = 
-            on.add(on.mat_mul(on.reshape((this.Rec (this.Rec(x,p5,p6,2L),p87,p88,3L)),[|1;256|]),on.reshape(p193,[|256;10|])),p194)
+            let layer (p1,p2,k) (x:Tensor<float32>) = 
+                on.max_pool(on.relu(on.add(on.conv(x,p1,auto_pad = "SAME_UPPER"),p2)),kernel_shape = [|k;k|], strides = [|k;k|]) |> fst
+            on.add(on.mat_mul(on.reshape(x |> layer(p5,p6,2L) |> layer (p87, p88, 2L),[|1;256|]),on.reshape(p193,[|256;10|])),p194)
 
     [<Test>]
     let ``full mnist``() = 
@@ -369,8 +368,9 @@ module FullModel =
     [<Test>]
     let ``converted graph``() = 
         let mnistG = MNISTGraph()
-        use graphFunction : DV<Tensor<float32> -> DV<Tensor<float32>>> = Foo.wrapGraph(<@ mnistG.Forward @>)
-        testModel2(graphFunction.F)
+        // I know about the new Type mismatch bug, I will work on it
+        use graphFunction : DV<Tensor<float32> -> DV<Tensor<float32>>> = toOnnxGraph(<@ mnistG.Forward @>)
+        testModel2(graphFunction.Value)
         testModel2(fun x -> new DV<Tensor<float32>>(mnistG.Forward(x),(fun () -> ())))
         
     type RecA = {a:Tensor<float32>;b:Tensor<float32>}
@@ -380,22 +380,13 @@ module FullModel =
     let ``complex input and output``() = 
         let tupleFunction = <@ fun (x:Tensor<float32>,y:Tensor<float32>) -> (on.add(x,y),on.sub(x,y),on.log(x)) @>
         let recFunction = <@ fun (x:RecA,y:Tensor<float32>) -> {a=x.a;b=x.b},{a = on.add(x.a,x.b); b = x; c = (x.a,x.b)} @>
-        use ff : DV<RecA*Tensor<float32> -> DV<RecA*RecB>> = Foo.wrapGraph(recFunction)
+        use ff : DV<RecA*Tensor<float32> -> DV<RecA*RecB>> = toOnnxGraph(recFunction)
         let p1 = [|0.1f|].ToTensor() :> Tensor<float32>
         let x = ({a=p1;b=p1},p1)
-        use y = ff.F(x)
-        let r1 = (fst y.F).a.ToArray() 
+        use y = ff.Value(x)
+        let r1 = (fst y.Value).a.ToArray() 
         let diff = (p1.ToArray(),r1) ||> Array.zip |> Array.sumBy (fun (x,y) -> System.Math.Abs(x-y))
         if diff > 0.1f then failwith "Error running function"
-
-//let p1 = [|0.1f|].ToTensor() :> Tensor<float32>
-//let x = ({a=p1;b=p1},p1)
-
-
-//let mnist = MNIST()
-//testModel(<@ mnist.Forward @>)
-//let ff23 : DV<Tensor<float32> -> DV<Tensor<float32>>> = wrapGraph(<@ mnist.Forward @>)
-
 
 module ONNXExample = 
     [<Test>]
@@ -429,7 +420,57 @@ module ONNXExample =
 //            printfn "Output for %s" r.Name
 //            printfn "%s" (r.AsTensor<float32>().GetArrayString())
 
+module ExpressionFunctions =                                         
+    open FSharp.Quotations.Evaluator
+    type O(a: string) = 
+        [<ReflectedDefinition>] static member A = "A"
+        [<ReflectedDefinition>] static member AA with get() = "A" and set(x) = printf "%s" x
+        [<ReflectedDefinition>] static member B () = "B"
+        [<ReflectedDefinition>] static member BA () () = "BA"
+        [<ReflectedDefinition>] static member C (c1:string) = c1 + "C"
+        [<ReflectedDefinition>] static member D (d1:string, d2:int) = d1 + string d2 + "D"
+        [<ReflectedDefinition>] static member E (e1:string) (e2:int) = e1 + string e2 + "E"
+        [<ReflectedDefinition>] static member F( f1:string) (f2:int,f3:bool) = f1 + string f2 + string f3 + "F"
+        [<ReflectedDefinition>] static member G (g1:string) = fun (g2:int) -> g1 + string g2 + "G"
+        [<ReflectedDefinition>] static member H () (h1:string) (h2:string,h3:int) (h4:string,h5:int,h6:bool) = h1 + h2 + string h3 + h4 + string h5 + string h6 + "H"
+        [<ReflectedDefinition>] member x.A0 = "A" + a
+        [<ReflectedDefinition>] member x.B0 () = "B" + a
+        [<ReflectedDefinition>] member x.C0 (c1:string) = c1 + "C" + a
+        [<ReflectedDefinition>] member x.D0 (d1:string, d2:int) = d1 + string d2 + "D" + a
+        [<ReflectedDefinition>] member x.E0 (e1:string) (e2:int) = e1 + string e2 + "E" + a
+        [<ReflectedDefinition>] member x.F0 (f1:string) (f2:int,f3:bool) = f1 + string f2 + string f3 + "F" + a
+        [<ReflectedDefinition>] member x.G0 (g1:string) = fun (g2:int) -> g1 + string g2 + "G" + a
+        [<ReflectedDefinition>] member x.H0 () (h1:string) (h2:string,h3:int) (h4:string,h5:int,h6:bool) = h1 + h2 + string h3 + h4 + string h5 + string h6 + "H" + a
+        [<ReflectedDefinition>] static member Combo() =
+                                            O.A + O.B() + O.BA () () +
+                                            O.C "c1" + O.D("d1",2) + O.E "e1" 2 + O.F "f1" (2,true) +
+                                            O.G "g1" 2 + O.H () "h1" ("h2",3) ("h4",5,true)
 
+        [<ReflectedDefinition>] member x.Combo0() = 
+                                            x.A0 + x.B0 () + 
+                                            x.C0 "c1" + x.D0("d1",2) + x.E0 "e1" 2 + 
+                                            x.F0 "f1" (2,true) + x.G0 "g1" 2 + x.H0 () "h1" ("h2",3) ("h4",5,true) + 
+                                            O.Combo()
 
+    [<Test>]
+    let ``static method quotation and simplification``() = 
+        let qt = <@ O.Combo() @>
+        let minQuote = 
+            qt 
+            |> Expr.unfoldWhileChanged ExprTransforms.expandWithReflectedDefinition |> Seq.last
+            |> Expr.unfoldWhileChanged (ExprTransforms.reduceApplicationsAndLambdas true) |> Seq.last
+            |> Expr.Cast<string>
+        Assert.AreEqual(minQuote.Evaluate(), qt.Evaluate(), "Static Method Quotation expanded and reduced")
+        Assert.AreEqual(minQuote |> Expr.getCallNames, set ["ToString"; "op_Addition"], "Expanded expression should only have ToString and op_Addition calls")
 
+    [<Test>]
+    let ``object method quotation and simplification``() = 
+        let qt = <@ O("A").Combo0() @>
+        let minQuote = 
+            qt 
+            |> Expr.unfoldWhileChanged ExprTransforms.expandWithReflectedDefinition |> Seq.last
+            |> Expr.unfoldWhileChanged (ExprTransforms.reduceApplicationsAndLambdas true) |> Seq.last
+            |> Expr.Cast<string>
+        Assert.AreEqual(minQuote.Evaluate(), qt.Evaluate(), "Objct Method Quotation expanded and reduced")
+        Assert.AreEqual(minQuote |> Expr.getCallNames, set ["ToString"; "op_Addition"], "Expanded expression should only have ToString and op_Addition calls")
 

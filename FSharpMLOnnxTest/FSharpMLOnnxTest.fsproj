@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
@@ -8,14 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="BuiltInExperiments.fsx" />
+    <None Include="Base.fsx" />
     <Compile Include="Tests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
-  <ItemGroup />
-
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.1.1" />
+    <PackageReference Include="FSharp.Quotations.Evaluator" Version="2.1.0" />
     <PackageReference Include="Google.Protobuf" Version="3.11.4" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.1.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.2.0" />
@@ -30,7 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ONNXBackend\ONNXBackend.fsproj" />
+    <ProjectReference Include="..\FSharpMLOnnx\FSharpMLOnnx.fsproj" />
   </ItemGroup>
 
   <ItemGroup>
