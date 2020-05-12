@@ -30,7 +30,6 @@ type MNIST() =
 ## TODO
 *	Nuget package
 *	Encapsulate Tensor type to support operator overloads
-*	Curried API for forward piping
 *	Code Analyzer to check code is transformable at design time
 *	Shape Analyzer to graph has valid shapes at design time
 *	Onnx graph optimizer passes
