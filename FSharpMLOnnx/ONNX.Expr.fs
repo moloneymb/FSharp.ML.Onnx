@@ -135,16 +135,40 @@ let suportedBaseTypes =
         typeof<Tensor<double>>
     |]
 
+let paramTypes = 
+    [|
+        typeof<uint8>
+        typeof<uint16>
+        typeof<uint32>
+        typeof<uint64>
+        typeof<int8>
+        typeof<int16>
+        typeof<int32>
+        typeof<int64>
+        typeof<float32>
+        typeof<double>
+        typeof<string>
+        typeof<bool>
+        typeof<System.Numerics.Complex>
+    |] |> Array.map (fun x -> x.FullName) |> set
+
 let rec mapType  (t:Type) : Type option = 
     let f (xs: Type[]) = xs |> Array.map mapType |> Option.all
     if t.IsArray then
         t.GetElementType() |> mapType |> Option.map (fun t2 -> t2.MakeArrayType())
     elif t |> FSharpType.IsTuple then
-        t |> FSharpType.GetTupleElements |> f |> Option.map (fun xs -> FSharpType.MakeTupleType xs)
+        t |> FSharpType.GetTupleElements |> f |> Option.map  FSharpType.MakeTupleType 
     elif FSharpType.IsUnion t || FSharpType.IsRecord t then
         t.GetGenericArguments() |> f |> Option.map (fun xs -> t.GetGenericTypeDefinition().MakeGenericType(xs))
     elif suportedBaseTypes |> Array.exists (fun x -> x.IsAssignableFrom(t)) then
         Some(typeof<ValueInfo>)
+    elif FSharpType.IsFunction t then
+        let (x,y) = FSharpType.GetFunctionElements t
+        match mapType x, mapType y with
+        | Some(x),Some(y) -> Some(FSharpType.MakeFunctionType(x,y))
+        | _,_ -> None
+    elif paramTypes.Contains(t.FullName)  then  
+        Some(t)
     else
         None
 
@@ -164,7 +188,9 @@ let tryAssignable (t:Type) = suportedBaseTypes |> Array.tryFind (fun x -> x.IsAs
 let mapVar (v1:Var) = 
         match mapType(v1.Type) with 
         | Some(t) -> Var(v1.Name,t)
-        | None -> v1 //failwithf "Var %s has type %s which is not mappable" v1.Name v1.Type.FullName
+        | None ->  
+            printfn "Var %s has type %s which is not mappable" v1.Name v1.Type.FullName
+            v1
 
 module Map =
     let addRange (xs:#seq<'a*'b>) (map: Map<'a,'b>)  =
@@ -176,6 +202,7 @@ type Expr with
 
 let processExpr (graphExpr:Expr<Graph>) (expr: Expr) : Expr = 
     let rec processExpr (varMap: Map<Var,Var>) (expr: Expr) : Expr = 
+        //printfn "%s" (sprintf "%A"expr |> fun x -> x.Substring(0,min 60 (x.Length - 1)))
         match expr with
         | NewUnionCase (uci,args) ->
             match tryMapUnionCaseInfo uci with
@@ -184,7 +211,7 @@ let processExpr (graphExpr:Expr<Graph>) (expr: Expr) : Expr =
         | TupleGet(x,i) -> Expr.TupleGet(processExpr varMap x,i)
         | NewTuple(xs) -> Expr.NewTuple(xs |> List.map (processExpr varMap))
         | Var v -> match varMap.TryFind(v) with | Some(v) -> Expr.Var(v) | _ -> failwithf "Var %s not found %s" v.Name v.Type.FullName
-        | VarSet(v1,body) -> v1 |> mapVar |> fun v2 -> Expr.VarSet(v2, processExpr (varMap.Add(v1,v2)) body)
+        | VarSet(_,_) -> failwith "Ensure VarSet is working as expected" ///v1 |> mapVar |> fun v2 -> Expr.VarSet(v2, processExpr (varMap.Add(v1,v2)) body)
         | Lambda(v1,body) -> v1 |> mapVar |> fun v2 -> Expr.Lambda(v2, processExpr (varMap.Add(v1,v2)) body)
         | Let(v1,exp1,exp2) -> v1 |> mapVar |> fun v2 -> Expr.Let(v2, processExpr varMap exp1, processExpr (varMap.Add(v1,v2)) exp2)
         | LetRecursive(xs,body) ->  
@@ -206,11 +233,12 @@ let processExpr (graphExpr:Expr<Graph>) (expr: Expr) : Expr =
                 elif mi.DeclaringType.FullName = ONNXAPIFullName then
                     match targetMethods.TryFind(mi.Name) with
                     | Some(targetMethod) -> 
-                        let ys = 
-                            targetMethod.GetParameters().[1..] 
-                            |> Array.map (fun x -> x.ParameterType = typeof<ValueInfo> || x.ParameterType = typeof<ValueInfo option>)
-                            |> Array.toList
-                        let args = graphExpr.Raw :: ((ys,args) ||> List.zip |> List.map (fun (y,x) -> if y then processExpr varMap x else x))
+                        //let ys = 
+                        //    targetMethod.GetParameters().[1..] 
+                        //    |> Array.map (fun x -> x.ParameterType = typeof<ValueInfo> || x.ParameterType = typeof<ValueInfo option>)
+                        //    |> Array.toList
+                        //let args = graphExpr.Raw :: ((ys,args) ||> List.zip |> List.map (fun (y,x) -> if y then processExpr varMap x else x))
+                        let args = graphExpr.Raw :: args |> List.map (processExpr varMap)
                         Expr.Call(instanceO,targetMethod, args)
                     | None -> failwithf "Unsupported %s method %s" ONNXAPIFullName mi.Name
                 else 
@@ -223,9 +251,17 @@ let processExpr (graphExpr:Expr<Graph>) (expr: Expr) : Expr =
                 match tryAssignable mi.DeclaringType with
                 | None -> failwithf "Unsupported type %s; it is neither whitelist or assignable to a supported tensor" mi.DeclaringType.FullName
                 | Some (u) -> Expr.Call(constantFunction.[u.FullName],[graphExpr; expr])
+        | Application(expr1, expr2) -> Expr.Application(expr1 |> processExpr varMap,expr2 |> processExpr varMap)
+        | PropertyGet(x,y,z) -> 
+            match x with 
+            | Some(x) -> Expr.PropertyGet(x,y,z) 
+            | None -> Expr.PropertyGet(y,z)
+        | Value(o,t) -> Expr.Value(o,t)
         | ShapeVar _ -> failwithf "ShapeVar %A" expr
         | ShapeLambda (v, expr) -> failwithf "ShapeLamda %A" expr
-        | ShapeCombination (o, xs) -> RebuildShapeCombination (o, xs |> List.map (processExpr varMap))
+        | ShapeCombination (o, xs) -> 
+            printfn "ShapeCombination %O %O" o xs
+            RebuildShapeCombination (o, xs |> List.map (processExpr varMap))
     processExpr Map.empty expr 
 
 let rec containsRecord (t:Type) : bool =

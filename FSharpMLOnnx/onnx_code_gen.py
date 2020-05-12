@@ -1,4 +1,6 @@
-﻿# NOTE: This was run in Linux, getting onnx wheel to work in windows requires python 3.7
+﻿# NOTE: Curried API requires overloading on the curried parameter which we cannot do at this stage
+#       A case could be made for using non-generic Tensors which would not need overloaded functions
+# NOTE: This was run in Linux, getting onnx wheel to work in windows requires python 3.7
 # NOTE: Single inputs allways appear before Optional
 # NOTE: Variadic inputs are at most one and are always last
 # NOTE: Only 'Loop' has Variadic and Optional
@@ -19,11 +21,13 @@ import os
 
 # TODO relative path
 dirname = os.path.dirname(__file__)
-snake_path = os.path.join(dirname, 'Onnx.API.SnakeCase.fs')
+snake_path = os.path.join(dirname, 'Onnx.API.SnakeCase.g.fs')
 snake_module = "FSharp.ML.Onnx.API.SnakeCase"
-pascal_path = os.path.join(dirname, 'Onnx.API.PascalCase.fs')
+pascal_path = os.path.join(dirname, 'Onnx.API.PascalCase.g.fs')
 pascal_module = "FSharp.ML.Onnx.API.PascalCase"
-graph_path = os.path.join(dirname, 'Onnx.API.Graph.fs')
+curried_path = os.path.join(dirname, 'Onnx.API.Curried.g.fs')
+curried_module = "FSharp.ML.Onnx.API.Curried"
+graph_path = os.path.join(dirname, 'Onnx.API.Graph.g.fs')
 
 fsharp_keywords = set ([
     "abstract", "as", "base", "begin", "class", "default", "delegate", "do", "done", "downcast", "downto", "elif",
@@ -311,6 +315,18 @@ def get_params(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap):
         [f'?{x.name}: {mapAttrType(x)}' for x in opt_attrs])
     return params
 
+def get_params_curried(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap):
+    if ((len(req_inputs) > 0) and ((len(req_inputs) + len(opt_inputs) + len(var_inputs) + len(req_attrs) + len(opt_attrs)) > 1)):
+        params = ", ".join(
+            [inputParamString(x, typeMap) for x in req_inputs[1:]] + 
+            [f'{x.name}: {mapAttrType(x)}' for x in req_attrs] + 
+            [inputParamString(x, typeMap) for x in var_inputs] +
+            [inputParamString(x, typeMap) for x in opt_inputs] + 
+            [f'?{x.name}: {mapAttrType(x)}' for x in opt_attrs])
+        return params + ") (" + inputParamString(req_inputs[0], typeMap) 
+    else:
+        return get_params(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
+
 def params_passthrough(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap):
     params = ", ".join(
         [f'{x.name} = {x.name}' for x in (req_inputs + req_attrs + var_inputs)] + 
@@ -320,9 +336,9 @@ def params_passthrough(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, t
 ####################################################################################################
 #                     Code Gen
 ####################################################################################################
+#list(range(0,10))[1:]
 
-
-def write_api(path, module, snake_case):
+def write_api(path, module, snake_case, curried):
     fo = open(path,"w")
     fo.write("module " + module + "\n")
     fo.write("\n")
@@ -345,11 +361,16 @@ def write_api(path, module, snake_case):
     # NOTE: Req inputs, Req attr, Opt inputs, Opt attr, Var inputs
 
     schemas_out = []
+    def get_params2(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap):
+        if curried:
+            return get_params_curried(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
+        else:
+            return get_params(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
 
     def code_gen_single_output(fo,schema,typeMap,outputTypes):
         (req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs) = get_part_inputs_and_attrs(schema)
         opt_attrs = [x for x in opt_attrs if not ("Pool" in schema.name and x.name == "ceil_mode")] # Should figure out how
-        params = get_params(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
+        params = get_params2(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
         if snake_case:
             fo.write(f'    static member {change_cap(schema.name)}({params}) =\n')
             fo.write(f'        on.{schema.name}({params_passthrough(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)})\n')
@@ -428,7 +449,7 @@ def write_api(path, module, snake_case):
             for (gen1,gen2) in ([("<'a>","'a")] if (len(schema.inputs) == 0 or schema.name == "Cast") else [("<'a>","'a"),("",mapONNXToFSharp(t))]):
                 req_attrs = [x for x in req_attrs if x.name != 'dtype' and x.name != 'to']
                 opt_attrs = [x for x in opt_attrs if x.name != 'dtype' and x.name != 'to']
-                params = get_params(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
+                params = get_params2(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
                 if snake_case:
                     fo.write(f'    static member {change_cap(schema.name)}{gen1}({params}) =\n')
                     fo.write(f'        on.{schema.name}{gen1}({params_passthrough(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)})\n')
@@ -569,7 +590,8 @@ def write_graph_api(path):
 
 
 write_graph_api(graph_path)
-write_api(snake_path, snake_module, True)
-write_api(pascal_path, pascal_module, False)
+write_api(snake_path, snake_module, True, False)
+write_api(pascal_path, pascal_module, False, False)
+#write_api(curried_path, curried_module, True,True)
 
 

@@ -1715,45 +1715,45 @@ type Onnx() =
         on.EyeLike<'a>(input = input, ?k = k)
     static member eye_like(input: Tensor<int>, ?k: int64) =
         on.EyeLike(input = input, ?k = k)
-    static member eye_like<'a>(input: Tensor<uint32>, ?k: int64) =
+    static member eye_like<'a>(input: Tensor<double>, ?k: int64) =
         on.EyeLike<'a>(input = input, ?k = k)
-    static member eye_like(input: Tensor<uint32>, ?k: int64) =
+    static member eye_like(input: Tensor<double>, ?k: int64) =
         on.EyeLike(input = input, ?k = k)
     static member eye_like<'a>(input: Tensor<int8>, ?k: int64) =
         on.EyeLike<'a>(input = input, ?k = k)
     static member eye_like(input: Tensor<int8>, ?k: int64) =
         on.EyeLike(input = input, ?k = k)
-    static member eye_like<'a>(input: Tensor<uint64>, ?k: int64) =
+    static member eye_like<'a>(input: Tensor<int16>, ?k: int64) =
         on.EyeLike<'a>(input = input, ?k = k)
-    static member eye_like(input: Tensor<uint64>, ?k: int64) =
+    static member eye_like(input: Tensor<int16>, ?k: int64) =
         on.EyeLike(input = input, ?k = k)
     static member eye_like<'a>(input: Tensor<uint8>, ?k: int64) =
         on.EyeLike<'a>(input = input, ?k = k)
     static member eye_like(input: Tensor<uint8>, ?k: int64) =
         on.EyeLike(input = input, ?k = k)
-    static member eye_like<'a>(input: Tensor<int16>, ?k: int64) =
+    static member eye_like<'a>(input: Tensor<uint32>, ?k: int64) =
         on.EyeLike<'a>(input = input, ?k = k)
-    static member eye_like(input: Tensor<int16>, ?k: int64) =
+    static member eye_like(input: Tensor<uint32>, ?k: int64) =
         on.EyeLike(input = input, ?k = k)
-    static member eye_like<'a>(input: Tensor<int64>, ?k: int64) =
+    static member eye_like<'a>(input: Tensor<uint16>, ?k: int64) =
         on.EyeLike<'a>(input = input, ?k = k)
-    static member eye_like(input: Tensor<int64>, ?k: int64) =
-        on.EyeLike(input = input, ?k = k)
-    static member eye_like<'a>(input: Tensor<double>, ?k: int64) =
-        on.EyeLike<'a>(input = input, ?k = k)
-    static member eye_like(input: Tensor<double>, ?k: int64) =
-        on.EyeLike(input = input, ?k = k)
-    static member eye_like<'a>(input: Tensor<bool>, ?k: int64) =
-        on.EyeLike<'a>(input = input, ?k = k)
-    static member eye_like(input: Tensor<bool>, ?k: int64) =
+    static member eye_like(input: Tensor<uint16>, ?k: int64) =
         on.EyeLike(input = input, ?k = k)
     static member eye_like<'a>(input: Tensor<float32>, ?k: int64) =
         on.EyeLike<'a>(input = input, ?k = k)
     static member eye_like(input: Tensor<float32>, ?k: int64) =
         on.EyeLike(input = input, ?k = k)
-    static member eye_like<'a>(input: Tensor<uint16>, ?k: int64) =
+    static member eye_like<'a>(input: Tensor<int64>, ?k: int64) =
         on.EyeLike<'a>(input = input, ?k = k)
-    static member eye_like(input: Tensor<uint16>, ?k: int64) =
+    static member eye_like(input: Tensor<int64>, ?k: int64) =
+        on.EyeLike(input = input, ?k = k)
+    static member eye_like<'a>(input: Tensor<bool>, ?k: int64) =
+        on.EyeLike<'a>(input = input, ?k = k)
+    static member eye_like(input: Tensor<bool>, ?k: int64) =
+        on.EyeLike(input = input, ?k = k)
+    static member eye_like<'a>(input: Tensor<uint64>, ?k: int64) =
+        on.EyeLike<'a>(input = input, ?k = k)
+    static member eye_like(input: Tensor<uint64>, ?k: int64) =
         on.EyeLike(input = input, ?k = k)
     static member multinomial<'a>(input: Tensor<double>, ?sample_size: int64, ?seed: float32) =
         on.Multinomial<'a>(input = input, ?sample_size = sample_size, ?seed = seed)
@@ -1767,105 +1767,105 @@ type Onnx() =
         on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
     static member random_uniform_like(input: Tensor<int>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like<'a>(input: Tensor<uint32>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like<'a>(input: Tensor<double>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like(input: Tensor<uint32>, ?high: float32, ?low: float32, ?seed: float32) =
-        on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like<'a>(input: Tensor<string>, ?high: float32, ?low: float32, ?seed: float32) =
-        on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like(input: Tensor<string>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like(input: Tensor<double>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
     static member random_uniform_like<'a>(input: Tensor<int8>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
     static member random_uniform_like(input: Tensor<int8>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like<'a>(input: Tensor<uint64>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like<'a>(input: Tensor<string>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like(input: Tensor<uint64>, ?high: float32, ?low: float32, ?seed: float32) =
-        on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like<'a>(input: Tensor<uint8>, ?high: float32, ?low: float32, ?seed: float32) =
-        on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like(input: Tensor<uint8>, ?high: float32, ?low: float32, ?seed: float32) =
-        on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like<'a>(input: Tensor<int16>, ?high: float32, ?low: float32, ?seed: float32) =
-        on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like(input: Tensor<int16>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like(input: Tensor<string>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
     static member random_uniform_like<'a>(input: Tensor<Complex>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
     static member random_uniform_like(input: Tensor<Complex>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like<'a>(input: Tensor<int64>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like<'a>(input: Tensor<int16>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like(input: Tensor<int64>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like(input: Tensor<int16>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like<'a>(input: Tensor<double>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like<'a>(input: Tensor<uint8>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like(input: Tensor<double>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like(input: Tensor<uint8>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like<'a>(input: Tensor<bool>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like<'a>(input: Tensor<uint32>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like(input: Tensor<bool>, ?high: float32, ?low: float32, ?seed: float32) =
-        on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like<'a>(input: Tensor<float32>, ?high: float32, ?low: float32, ?seed: float32) =
-        on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
-    static member random_uniform_like(input: Tensor<float32>, ?high: float32, ?low: float32, ?seed: float32) =
+    static member random_uniform_like(input: Tensor<uint32>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
     static member random_uniform_like<'a>(input: Tensor<uint16>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
     static member random_uniform_like(input: Tensor<uint16>, ?high: float32, ?low: float32, ?seed: float32) =
         on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
+    static member random_uniform_like<'a>(input: Tensor<float32>, ?high: float32, ?low: float32, ?seed: float32) =
+        on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
+    static member random_uniform_like(input: Tensor<float32>, ?high: float32, ?low: float32, ?seed: float32) =
+        on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
+    static member random_uniform_like<'a>(input: Tensor<int64>, ?high: float32, ?low: float32, ?seed: float32) =
+        on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
+    static member random_uniform_like(input: Tensor<int64>, ?high: float32, ?low: float32, ?seed: float32) =
+        on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
+    static member random_uniform_like<'a>(input: Tensor<bool>, ?high: float32, ?low: float32, ?seed: float32) =
+        on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
+    static member random_uniform_like(input: Tensor<bool>, ?high: float32, ?low: float32, ?seed: float32) =
+        on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
+    static member random_uniform_like<'a>(input: Tensor<uint64>, ?high: float32, ?low: float32, ?seed: float32) =
+        on.RandomUniformLike<'a>(input = input, ?high = high, ?low = low, ?seed = seed)
+    static member random_uniform_like(input: Tensor<uint64>, ?high: float32, ?low: float32, ?seed: float32) =
+        on.RandomUniformLike(input = input, ?high = high, ?low = low, ?seed = seed)
     static member random_normal_like<'a>(input: Tensor<int>, ?mean: float32, ?scale: float32, ?seed: float32) =
         on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
     static member random_normal_like(input: Tensor<int>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like<'a>(input: Tensor<uint32>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like(input: Tensor<uint32>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like<'a>(input: Tensor<string>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like(input: Tensor<string>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like<'a>(input: Tensor<int8>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like(input: Tensor<int8>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like<'a>(input: Tensor<uint64>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like(input: Tensor<uint64>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like<'a>(input: Tensor<uint8>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like(input: Tensor<uint8>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like<'a>(input: Tensor<int16>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like(input: Tensor<int16>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like<'a>(input: Tensor<Complex>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like(input: Tensor<Complex>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like<'a>(input: Tensor<int64>, ?mean: float32, ?scale: float32, ?seed: float32) =
-        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like(input: Tensor<int64>, ?mean: float32, ?scale: float32, ?seed: float32) =
         on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
     static member random_normal_like<'a>(input: Tensor<double>, ?mean: float32, ?scale: float32, ?seed: float32) =
         on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
     static member random_normal_like(input: Tensor<double>, ?mean: float32, ?scale: float32, ?seed: float32) =
         on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like<'a>(input: Tensor<bool>, ?mean: float32, ?scale: float32, ?seed: float32) =
+    static member random_normal_like<'a>(input: Tensor<int8>, ?mean: float32, ?scale: float32, ?seed: float32) =
         on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like(input: Tensor<bool>, ?mean: float32, ?scale: float32, ?seed: float32) =
+    static member random_normal_like(input: Tensor<int8>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like<'a>(input: Tensor<string>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like(input: Tensor<string>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like<'a>(input: Tensor<Complex>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like(input: Tensor<Complex>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like<'a>(input: Tensor<int16>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like(input: Tensor<int16>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like<'a>(input: Tensor<uint8>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like(input: Tensor<uint8>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like<'a>(input: Tensor<uint32>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like(input: Tensor<uint32>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like<'a>(input: Tensor<uint16>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like(input: Tensor<uint16>, ?mean: float32, ?scale: float32, ?seed: float32) =
         on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
     static member random_normal_like<'a>(input: Tensor<float32>, ?mean: float32, ?scale: float32, ?seed: float32) =
         on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
     static member random_normal_like(input: Tensor<float32>, ?mean: float32, ?scale: float32, ?seed: float32) =
         on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like<'a>(input: Tensor<uint16>, ?mean: float32, ?scale: float32, ?seed: float32) =
+    static member random_normal_like<'a>(input: Tensor<int64>, ?mean: float32, ?scale: float32, ?seed: float32) =
         on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
-    static member random_normal_like(input: Tensor<uint16>, ?mean: float32, ?scale: float32, ?seed: float32) =
+    static member random_normal_like(input: Tensor<int64>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like<'a>(input: Tensor<bool>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like(input: Tensor<bool>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like<'a>(input: Tensor<uint64>, ?mean: float32, ?scale: float32, ?seed: float32) =
+        on.RandomNormalLike<'a>(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
+    static member random_normal_like(input: Tensor<uint64>, ?mean: float32, ?scale: float32, ?seed: float32) =
         on.RandomNormalLike(input = input, ?mean = mean, ?scale = scale, ?seed = seed)
     static member random_normal<'a>(shape: int64[], ?mean: float32, ?scale: float32, ?seed: float32) =
         on.RandomNormal<'a>(shape = shape, ?mean = mean, ?scale = scale, ?seed = seed)
@@ -1873,27 +1873,27 @@ type Onnx() =
         on.RandomUniform<'a>(shape = shape, ?high = high, ?low = low, ?seed = seed)
     static member cast<'a>(input: Tensor<int>) =
         on.Cast<'a>(input = input)
+    static member cast<'a>(input: Tensor<double>) =
+        on.Cast<'a>(input = input)
     static member cast<'a>(input: Tensor<string>) =
         on.Cast<'a>(input = input)
     static member cast<'a>(input: Tensor<int8>) =
         on.Cast<'a>(input = input)
-    static member cast<'a>(input: Tensor<uint32>) =
-        on.Cast<'a>(input = input)
-    static member cast<'a>(input: Tensor<uint64>) =
+    static member cast<'a>(input: Tensor<int16>) =
         on.Cast<'a>(input = input)
     static member cast<'a>(input: Tensor<uint8>) =
         on.Cast<'a>(input = input)
-    static member cast<'a>(input: Tensor<int16>) =
+    static member cast<'a>(input: Tensor<uint32>) =
         on.Cast<'a>(input = input)
-    static member cast<'a>(input: Tensor<int64>) =
-        on.Cast<'a>(input = input)
-    static member cast<'a>(input: Tensor<double>) =
-        on.Cast<'a>(input = input)
-    static member cast<'a>(input: Tensor<bool>) =
+    static member cast<'a>(input: Tensor<uint16>) =
         on.Cast<'a>(input = input)
     static member cast<'a>(input: Tensor<float32>) =
         on.Cast<'a>(input = input)
-    static member cast<'a>(input: Tensor<uint16>) =
+    static member cast<'a>(input: Tensor<int64>) =
+        on.Cast<'a>(input = input)
+    static member cast<'a>(input: Tensor<bool>) =
+        on.Cast<'a>(input = input)
+    static member cast<'a>(input: Tensor<uint64>) =
         on.Cast<'a>(input = input)
     static member tree_ensemble_classifier(X: Tensor<float32>, ?base_values: float32[], ?class_ids: int64[], ?class_nodeids: int64[], ?class_treeids: int64[], ?class_weights: float32[], ?classlabels_int64s: int64[], ?classlabels_strings: string[], ?nodes_falsenodeids: int64[], ?nodes_featureids: int64[], ?nodes_hitrates: float32[], ?nodes_missing_value_tracks_true: int64[], ?nodes_modes: string[], ?nodes_nodeids: int64[], ?nodes_treeids: int64[], ?nodes_truenodeids: int64[], ?nodes_values: float32[], ?post_transform: string) =
         on.TreeEnsembleClassifier(X = X, ?base_values = base_values, ?class_ids = class_ids, ?class_nodeids = class_nodeids, ?class_treeids = class_treeids, ?class_weights = class_weights, ?classlabels_int64s = classlabels_int64s, ?classlabels_strings = classlabels_strings, ?nodes_falsenodeids = nodes_falsenodeids, ?nodes_featureids = nodes_featureids, ?nodes_hitrates = nodes_hitrates, ?nodes_missing_value_tracks_true = nodes_missing_value_tracks_true, ?nodes_modes = nodes_modes, ?nodes_nodeids = nodes_nodeids, ?nodes_treeids = nodes_treeids, ?nodes_truenodeids = nodes_truenodeids, ?nodes_values = nodes_values, ?post_transform = post_transform)

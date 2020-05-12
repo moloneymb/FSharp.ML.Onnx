@@ -13,9 +13,9 @@
     <Compile Include="Utils.fs" />
     <Compile Include="Utils.Expr.fs" />
     <Compile Include="Onnx.Protobuf.fs" />
-    <Compile Include="Onnx.API.PascalCase.fs" />
-    <Compile Include="Onnx.API.SnakeCase.fs" />
-    <Compile Include="Onnx.API.Graph.fs" />
+    <Compile Include="Onnx.API.PascalCase.g.fs" />
+    <Compile Include="Onnx.API.SnakeCase.g.fs" />
+    <Compile Include="Onnx.API.Graph.g.fs" />
     <Compile Include="Onnx.Expr.fs" />
     <Compile Include="Onnx.Extensions.fs" />
     <None Include="onnx_code_gen.py" />

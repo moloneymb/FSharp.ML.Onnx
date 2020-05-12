@@ -335,7 +335,9 @@ module FullModel =
         [<ReflectedDefinition>]
         member this.Forward(graph: Graph, x: ValueInfo) = 
             let constant (x:Tensor<float32>) = Constants.constant(graph,x)
-            ong.Add(graph, ong.MatMul(graph, ong.Reshape(graph, (this.Rec (graph, this.Rec(graph, x,constant p5,constant p6,2L),constant p87,constant p88,3L)),Constants.constant(graph,[|1L;256L|].ToTensor())),ong.Reshape(graph,constant p193,Constants.constant(graph,[|256L;10L|].ToTensor()))),constant p194)
+            let x = this.Rec(graph, x, constant p5,constant p6,2L)
+            let x = this.Rec (graph, x, constant p87,constant p88,3L)
+            ong.Add(graph, ong.MatMul(graph, ong.Reshape(graph, x,Constants.constant(graph,[|1L;256L|].ToTensor())),ong.Reshape(graph,constant p193,Constants.constant(graph,[|256L;10L|].ToTensor()))),constant p194)
 
         [<ReflectedDefinition>]
         member this.Rec(x:Tensor<float32>,p1,p2,k) = 
@@ -345,7 +347,7 @@ module FullModel =
         member this.Forward(x: Tensor<float32>) = 
             let layer (p1,p2,k) (x:Tensor<float32>) = 
                 on.max_pool(on.relu(on.add(on.conv(x,p1,auto_pad = "SAME_UPPER"),p2)),kernel_shape = [|k;k|], strides = [|k;k|]) |> fst
-            on.add(on.mat_mul(on.reshape(x |> layer(p5,p6,2L) |> layer (p87, p88, 2L),[|1;256|]),on.reshape(p193,[|256;10|])),p194)
+            on.add(on.mat_mul(on.reshape(x |> layer(p5,p6,2L) |> layer (p87, p88, 3L),[|1;256|]),on.reshape(p193,[|256;10|])),p194)
 
     [<Test>]
     let ``full mnist``() = 
@@ -368,7 +370,6 @@ module FullModel =
     [<Test>]
     let ``converted graph``() = 
         let mnistG = MNISTGraph()
-        // I know about the new Type mismatch bug, I will work on it
         use graphFunction : DV<Tensor<float32> -> DV<Tensor<float32>>> = toOnnxGraph(<@ mnistG.Forward @>)
         testModel2(graphFunction.Value)
         testModel2(fun x -> new DV<Tensor<float32>>(mnistG.Forward(x),(fun () -> ())))
