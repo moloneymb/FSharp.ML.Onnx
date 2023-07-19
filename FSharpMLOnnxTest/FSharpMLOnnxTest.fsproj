@@ -36,8 +36,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="OnnxMLProto">
-      <HintPath>..\protobuf\onnx\csharp\OnnxMLProto.dll</HintPath>
+    <Reference Include="OnnxMlProto">
+      <HintPath>..\OnnxMlProto.dll</HintPath>
     </Reference>
   </ItemGroup>
 
