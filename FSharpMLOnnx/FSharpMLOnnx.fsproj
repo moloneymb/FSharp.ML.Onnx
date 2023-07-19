@@ -27,8 +27,8 @@
 
   <ItemGroup>
     <PackageReference Include="FSharp.Quotations.Evaluator" Version="2.1.0" />
-    <PackageReference Include="Google.Protobuf" Version="3.15.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.1.2" />
+    <PackageReference Include="Google.Protobuf" Version="3.23.4" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.15.1" />
     <PackageReference Include="System.Runtime" Version="4.3.1" />
   </ItemGroup>
 
@@ -36,6 +36,10 @@
     <Reference Include="OnnxMLProto">
       <HintPath>..\protobuf\onnx\csharp\OnnxMLProto.dll</HintPath>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="7.0.300" />
   </ItemGroup>
 
 </Project>
