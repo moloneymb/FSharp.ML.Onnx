@@ -88,8 +88,8 @@ type OnnxGraph() =
         graph.AddNode("Flatten", [|input|], [|input.dt|], [|Attr.int("axis", axis, 1L)|]) |> toTuple1
     static member ReduceLogSum(graph: Graph, data: ValueInfo, ?axes: ValueInfo, ?keepdims: int64, ?noop_with_empty_axes: int64) =
         graph.AddNode("ReduceLogSum", ([|Some(data); axes|] |> Array.choose id), [|data.dt|], [|Attr.int("keepdims", keepdims, 1L); Attr.int("noop_with_empty_axes", noop_with_empty_axes, 0L)|]) |> toTuple1
-    static member Einsum(graph: Graph, equation: string, [<ParamArray>]Inputs: ValueInfo[]) =
-        graph.AddNode("Einsum", (Inputs), [|Inputs.[0].dt|], [|Attr.string("equation", equation)|]) |> toTuple1
+    static member Einsum(graph: Graph, equation: string, [<ParamArray>]inputs: ValueInfo[]) =
+        graph.AddNode("Einsum", (inputs), [|inputs.[0].dt|], [|Attr.string("equation", equation)|]) |> toTuple1
     static member ReduceLogSumExp(graph: Graph, data: ValueInfo, ?axes: ValueInfo, ?keepdims: int64, ?noop_with_empty_axes: int64) =
         graph.AddNode("ReduceLogSumExp", ([|Some(data); axes|] |> Array.choose id), [|data.dt|], [|Attr.int("keepdims", keepdims, 1L); Attr.int("noop_with_empty_axes", noop_with_empty_axes, 0L)|]) |> toTuple1
     static member Sub(graph: Graph, A: ValueInfo, B: ValueInfo) =
@@ -164,8 +164,8 @@ type OnnxGraph() =
         graph.AddNode("ReduceSum", ([|Some(data); axes|] |> Array.choose id), [|data.dt|], [|Attr.int("keepdims", keepdims, 1L); Attr.int("noop_with_empty_axes", noop_with_empty_axes, 0L)|]) |> toTuple1
     static member Elu(graph: Graph, X: ValueInfo, ?alpha: float32) =
         graph.AddNode("Elu", [|X|], [|X.dt|], [|Attr.float("alpha", alpha, 1.0f)|]) |> toTuple1
-    static member Reshape(graph: Graph, data: ValueInfo, shape: ValueInfo, ?allowzero: int64) =
-        graph.AddNode("Reshape", [|data; shape|], [|data.dt|], [|Attr.int("allowzero", allowzero, 0L)|]) |> toTuple1
+    static member Reshape(graph: Graph, data: ValueInfo, shape: ValueInfo) =
+        graph.AddNode("Reshape", [|data; shape|], [|data.dt|], [||]) |> toTuple1
     static member Selu(graph: Graph, X: ValueInfo, ?alpha: float32, ?gamma: float32) =
         graph.AddNode("Selu", [|X|], [|X.dt|], [|Attr.float("alpha", alpha, 1.6732631921768188f); Attr.float("gamma", gamma, 1.0507010221481323f)|]) |> toTuple1
     static member GlobalAveragePool(graph: Graph, X: ValueInfo) =
@@ -256,8 +256,8 @@ type OnnxGraph() =
         graph.AddNode("Greater", [|A; B|], [|DataType.BOOL|], [||]) |> toTuple1
     static member IsNaN(graph: Graph, X: ValueInfo) =
         graph.AddNode("IsNaN", [|X|], [|DataType.BOOL|], [||]) |> toTuple1
-    static member Shape(graph: Graph, data: ValueInfo, ?end: int64, ?start: int64) =
-        graph.AddNode("Shape", [|data|], [|DataType.INT64|], [|Attr.int("end", end); Attr.int("start", start, 0L)|]) |> toTuple1
+    static member Shape(graph: Graph, data: ValueInfo, ?end_: int64, ?start: int64) =
+        graph.AddNode("Shape", [|data|], [|DataType.INT64|], [|Attr.int("end", end_); Attr.int("start", start, 0L)|]) |> toTuple1
     static member Size(graph: Graph, data: ValueInfo) =
         graph.AddNode("Size", [|data|], [|DataType.INT64|], [||]) |> toTuple1
     static member Xor(graph: Graph, A: ValueInfo, B: ValueInfo) =
@@ -331,7 +331,7 @@ type OnnxGraph() =
     static member TopK(graph: Graph, X: ValueInfo, K: ValueInfo, ?axis: int64, ?largest: int64, ?sorted: int64) =
         graph.AddNode("TopK", [|X; K|], [|X.dt; DataType.INT64|], [|Attr.int("axis", axis, -1L); Attr.int("largest", largest, 1L); Attr.int("sorted", sorted, 1L)|]) |> toTuple2
     static member Dropout(graph: Graph, data: ValueInfo, ?ratio: ValueInfo, ?training_mode: ValueInfo, ?seed: int64) =
-        graph.AddNode("Dropout", ([|Some(data); ratio; training_mode|] |> Array.choose id), [|data.dt; training_mode.dt|], [|Attr.int("seed", seed)|]) |> toTuple2
+        graph.AddNode("Dropout", ([|Some(data); ratio; training_mode|] |> Array.choose id), [|data.dt; |], [|Attr.int("seed", seed)|]) |> toTuple2
     static member Unique(graph: Graph, X: ValueInfo, ?axis: int64, ?sorted: int64) =
         graph.AddNode("Unique", [|X|], [|X.dt; DataType.INT64; DataType.INT64; DataType.INT64|], [|Attr.int("axis", axis); Attr.int("sorted", sorted, 1L)|]) |> toTuple4
     static member DynamicQuantizeLinear(graph: Graph, x: ValueInfo) =
