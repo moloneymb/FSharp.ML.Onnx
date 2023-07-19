@@ -5,12 +5,16 @@
 # NOTE: Variadic inputs are at most one and are always last
 # NOTE: Only 'Loop' has Variadic and Optional
 # NOTE: 'NonMaxSuppression' #has no type constraint
+
 # TODO handle AttrType.TENSOR and AttrType.SPARSE_TENSOR for 'Constant' nodes
 # TODO documentation
 # TODO consider returning anonomous types instead of tuples
 # TODO ['DictVectorizer', 'ConcatFromSequence', 'SplitToSequence', 'SequenceErase', 'SequenceAt', 'SequenceInsert', 'SequenceConstruct', 'ConstantOfShape', 'If', 'ZipMap', 'SequenceLength', 'Scan', 'Loop', 'Split', 'Constant', 'CastMap']
 # TODO QuantizeLinear, input y_zero_point should not be optional as it's the only parameter with output of T2
 # TODO NonMaxSuppression, output type is a single list that happens to match an input typeStr, should jsut be DataType.INT64
+
+# MelWeightMatrix
+
 
 from onnx import defs
 from onnx import AttributeProto
@@ -20,7 +24,18 @@ import re
 import os
 
 # TODO relative path
-dirname = os.path.dirname(__file__)
+def get_dirname():
+  try:
+    return os.path.dirname(__file__)
+  except: 
+    return os.getcwd()
+
+
+dirname = get_dirname()
+
+
+
+
 snake_path = os.path.join(dirname, 'Onnx.API.SnakeCase.g.fs')
 snake_module = "FSharp.ML.Onnx.API.SnakeCase"
 pascal_path = os.path.join(dirname, 'Onnx.API.PascalCase.g.fs')
@@ -72,7 +87,8 @@ def hasType(z,schema):
 def mapNames(xs):
     return [x.name for x in xs]
 
-todo_schemas = (['ConstantOfShape','Constant'] + # Attribute TENSOR or SPARSE_TENSOR #[x.name for x in schemas if len([attr for (_,attr) in x.attributes.items() if (attr.type == AttrType.TENSOR or attr.type == AttrType.SPARSE_TENSOR)]) > 0]
+#NOTE; will have to add more here
+todo_schemas = (['TreeEnsembleRegressor','ConstantOfShape','Constant'] + # Attribute TENSOR or SPARSE_TENSOR #[x.name for x in schemas if len([attr for (_,attr) in x.attributes.items() if (attr.type == AttrType.TENSOR or attr.type == AttrType.SPARSE_TENSOR)]) > 0]
                 ['ConcatFromSequence', 'SplitToSequence', 'SequenceErase', 'SequenceAt', 'SequenceInsert', 'SequenceConstruct', 'SequenceEmpty', 'SequenceLength'] + #sequences [x.name for x in schemas if hasType("seq",x)]
                 ['DictVectorizer', 'ZipMap', 'CastMap'] + #maps [x.name for x in schemas if hasType("map",x)]
                 ['If', 'Scan', 'Loop', ] + # GRAPH Attribute # Loop has Combined Optional and Variadic inputs
@@ -81,7 +97,9 @@ todo_schemas = (['ConstantOfShape','Constant'] + # Attribute TENSOR or SPARSE_TE
                 ['Cast'] + #Done 'to' attribute
                 ['SequenceEmpty', 'EyeLike', 'Multinomial', 'RandomUniformLike', 'RandomNormalLike', 'RandomNormal', 'RandomUniform'] + # Done 'dtype' in the attributes
                 ['TreeEnsembleClassifier', 'LSTM', 'LinearClassifier', 'SVMClassifier', 'MaxPool', 'GRU', 'TopK', 'Dropout', 'Unique', 'DynamicQuantizeLinear', 'RNN', 'BatchNormalization'] + # Done multi-outputs [x for x in schemas if (x.max_output != 1 or x.min_output != 1)]
-                ['LabelEncoder', 'CategoryMapper']) #Done # special case, these appear to have a single input and a single output with the same type...
+                ['LabelEncoder', 'CategoryMapper'] + #Done # special case, these appear to have a single input and a single output with the same type...
+                ['MelWeightMatrix',"BlackmanWindow", "Gradient", "HammingWindow", "HannWindow", "SequenceMap", "LayerNormalization", "Optional","Bernoulli","OptionalGetElement"]
+                ) 
 
 filtered = set(todo_schemas)
 
@@ -416,6 +434,7 @@ def write_api(path, module, snake_case, curried):
         for t in [mapONNXToFSharp(x) for x in input_types if mapONNXToFSharp(x)]:
             code_gen_single_output(fo,schema,(lambda x: t if mapONNXToFSharp(x) is None else mapONNXToFSharp(x)),mapONNXToFSharp(output_type))
 
+
     for schema in so_multi_type:
         print(f'{schema.name}')
         schemas_out.append(schema.name)
@@ -460,8 +479,9 @@ def write_api(path, module, snake_case, curried):
                     inputs = '[|' + '; '.join([f'MV.mv(1,{x.name})' for x in req_inputs]) + '|]'
                     dtypes = "; ".join([str(mapONNXToDtype(x)) + "L" for x in  schema.outputs[0].types if mapONNXToDtype(x) is not None])
                     fo.write(f'\n        execNodeCheck<{gen2}> "{schema.name}" {inputs} [|{dtypes}|] {optionalChoose(attrProto)}\n')
-
-    for schemaName in ['TreeEnsembleClassifier', 'LSTM', 'LinearClassifier', 'SVMClassifier', 'MaxPool', 'GRU', 'TopK', 'Dropout', 'Unique', 'DynamicQuantizeLinear', 'RNN', 'BatchNormalization']:
+    
+    #TODO consider adding these back in; 'TreeEnsembleClassifier'
+    for schemaName in [ 'LSTM', 'LinearClassifier', 'SVMClassifier', 'MaxPool', 'GRU', 'TopK', 'Dropout', 'Unique', 'DynamicQuantizeLinear', 'RNN', 'BatchNormalization']:
         schema = getSchema(schemaName)
         schemas_out.append(schema.name)
         print(f'{schema.name}')
@@ -504,6 +524,7 @@ def write_graph_api(path):
         return params
 
     def code_gen_single_output_graph(fo,schema,typeMap,outputStr,outputCount):
+      try:
         (req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs) = get_part_inputs_and_attrs(schema)
         opt_attrs = [x for x in opt_attrs if not ("Pool" in schema.name and x.name == "ceil_mode")] # Should figure out how
         params = get_params_graph(req_inputs,opt_inputs,var_inputs, req_attrs, opt_attrs, typeMap)
@@ -523,6 +544,8 @@ def write_graph_api(path):
         else:
             raise Exception("shouldn't happen")
         fo.write(f'\n        graph.AddNode("{schema.name}", {inputs}, [|{outputStr}|], [|{attrProto}|]) |> toTuple{outputCount}\n')
+      except BaseException as e:
+         print(f'Error {schema.name} {str(e)}')
 
     def mapOutputTypeNames(schema):
         tcs = {z.type_param_str:z.allowed_type_strs for z in schema.type_constraints}
@@ -541,7 +564,7 @@ def write_graph_api(path):
                         print(ins)
                         print(ats)
                         print(tcs)
-                        raise Exception("err")
+                        print("ERROR")
                      return mapONNXToDataType(ats[0])
                  else:
                      # TODO perhaps add a check here
@@ -591,7 +614,7 @@ def write_graph_api(path):
 
 write_graph_api(graph_path)
 write_api(snake_path, snake_module, True, False)
-write_api(pascal_path, pascal_module, False, False)
-#write_api(curried_path, curried_module, True,True)
 
+#write_api(pascal_path, pascal_module, False, False)
+#write_api(curried_path, curried_module, True,True)
 

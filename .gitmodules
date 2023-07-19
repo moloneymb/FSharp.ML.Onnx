@@ -1,0 +1,3 @@
+[submodule "submodules/onnx"]
+	path = submodules/onnx
+	url = https://github.com/onnx/onnx.git
