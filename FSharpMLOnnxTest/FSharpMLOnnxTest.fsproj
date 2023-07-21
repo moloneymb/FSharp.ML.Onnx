@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="QualityOverlayTesting.fsx" />
     <None Include="Scratch.fsx" />
     <None Include="BuiltInExperiments.fsx" />
     <None Include="Base.fsx" />

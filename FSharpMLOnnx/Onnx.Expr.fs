@@ -15,6 +15,92 @@ open Microsoft.FSharp.Reflection
 open FSharp.ML.Onnx.Protobuf
 open Onnx
 
+// exclude 
+let canEval(q:Expr) =
+  let blackListTypeNames = set ["FSharp.ML.Onnx.API.PascalCase+Onnx"]
+
+  q |> Expr.flatten 
+    |> Seq.scan (fun (vars,_) y -> (match y with | Let(v,_,_) -> Set.add v vars | _ -> vars),  Some(y)) (Set.empty<Var>,None)
+    |> Seq.exists (fun (vars,x) ->
+      match x with  
+      //| Some(NewTuple _) -> true && incTuple
+      | Some(Var(v)) -> 
+        if v.Name = "arg0_0" then false
+        else not(vars.Contains(v) 
+        )
+      | Some(Call(_,f,_) as e) -> 
+        blackListTypeNames.Contains(f.DeclaringType.FullName) || e.Type.FullName.StartsWith("Microsoft.ML.OnnxRuntime.Tensors")
+      | Some(PropertyGet(None,_,_)) -> true
+      | Some(PropertyGet(_,y,_)) ->  
+        let isStructualType(t:Type) =
+          t.IsArray ||
+          FSharpType.IsTuple t ||
+          FSharpType.IsUnion t
+        // Not sure about record support
+        if isStructualType y.DeclaringType then false
+        else isNull y.DeclaringType.ReflectedType // this is incorrect.. when working with None
+      | _ -> false)
+    |> not
+
+let singleUseBindings (body:Expr) =
+  let letBindings = 
+    body 
+    |> Expr.flatten
+    |> Seq.choose (function | Let(v,x,_) -> Some(v,x) | _ -> None)
+    |> Map.ofSeq
+
+  // vars...
+  let varCounts = 
+    body 
+    |> Expr.flatten 
+    |> Seq.choose (function | Var(v) -> Some(v) | _ -> None)
+    |> Seq.toArray |> Array.groupBy id |> Array.map (fun (x,ys) -> (x,ys|>Array.length))
+    |> Map.ofArray
+
+  let replaceVars = Set [|for KeyValue(k,v) in varCounts do if v < 2 then yield k|]
+
+  let canEvals = 
+      [|for KeyValue(k,v) in letBindings do 
+          match v with
+          | NewUnionCase _ -> yield (k,v)
+          | _ ->
+            if v |> canEval then 
+              yield (k,v)
+            |] |> Map.ofArray
+
+  let mutable flag = false
+
+  let body' =
+    body 
+    |> Expr.map (function
+      | ShapeVar v when canEvals.ContainsKey(v) -> 
+        flag <- true
+        canEvals.[v]
+      | ShapeVar v when replaceVars.Contains(v) && letBindings.ContainsKey(v) -> 
+        flag <- true
+        letBindings.[v]
+      | Let(v,_,body) as letExpr -> 
+        match letBindings.TryFind(v) with
+        | None -> failwith "shouldn't happen"
+        | Some(expr) ->
+          if replaceVars.Contains(v) || (not (varCounts.ContainsKey(v))) then
+            flag <- true
+            body
+          else
+            letExpr
+      | x -> x)
+
+  if flag then Some(body')
+  else None
+
+let doEvals(t:Expr) =
+  match t with
+  | Value(_) -> None
+  | _ ->
+    if t |> canEval then Some(Expr.Value(FSharp.Quotations.Evaluator.QuotationEvaluator.EvaluateUntyped t,t.Type))
+    else None
+
+
 type DV<'a> = DisposableValue<'a>
 
 [<RequireQualifiedAccess>]
@@ -206,7 +292,9 @@ let processExpr (graphExpr:Expr<Graph>) (expr: Expr) : Expr =
         match expr with
         | NewUnionCase (uci,args) ->
             match tryMapUnionCaseInfo uci with
-            | Some(uci) -> Expr.NewUnionCase(uci, args |> List.map (processExpr varMap))
+            | Some(uci) -> 
+              // NOTE: we need to conver the type here...
+              Expr.NewUnionCase(uci, args |> List.map (processExpr varMap))
             | None -> failwithf "Unable to process union type %A" uci
         | TupleGet(x,i) -> Expr.TupleGet(processExpr varMap x,i)
         | NewTuple(xs) -> Expr.NewTuple(xs |> List.map (processExpr varMap))
@@ -217,6 +305,13 @@ let processExpr (graphExpr:Expr<Graph>) (expr: Expr) : Expr =
         | LetRecursive(xs,body) ->  
             let (es, vs1,vs2) = xs |> List.map fst |> fun x -> (xs |> List.map (snd >> processExpr varMap),x,x |> List.map mapVar)
             Expr.LetRecursive((vs2,es) ||> List.zip, body |> processExpr (varMap |> Map.addRange ((vs1,vs2) ||> List.zip)))
+        | PropertyGet(None,v,[]) as expr -> // Not sure if None here mean it's external
+          if v.PropertyType.FullName = "FSharp.ML.Onnx.Protobuf+Graph" then
+            expr // special case graph
+          else
+            match tryAssignable v.PropertyType with
+            | Some(u) -> Expr.Call(constantFunction.[u.FullName],[graphExpr; expr])
+            | None -> failwithf "Unsupported PropertyGet %A as type is not assignable to a supported type" expr
         | FieldGet (_,v) as expr ->
             match tryAssignable v.FieldType with
             | Some(u) -> Expr.Call(constantFunction.[u.FullName],[graphExpr; expr])
@@ -332,66 +427,72 @@ let mapRecordsToTuples(expr:Expr) =
         mapRecordsToTuples Map.empty
     mapRecordsToTuples expr
 
+let buildGraph(func: Expr<'a->'b>) (mmIn:MM) (mmOut:MM) : ValueInfo[]*ValueInfo[]*ModelProto =
+    let inputs = getValueInfo(mmIn)
+
+    let assembleInput(value: Expr) (mm:MM) : (Expr) =
+        let getValueInfoFromArray = 
+            let x = getArray.MakeGenericMethod(typeof<ValueInfo>)
+            fun index -> Expr.Call(x,[value; Expr.Value(index)])
+        let rec combineValueInfoResult(index:int,  mm:MM) : (int*Expr) =
+            let f(index,xs) =
+                ((index,[]),xs) 
+                ||> Array.fold (fun (index,acc) x -> combineValueInfoResult(index,  x) |> fun (i,x) -> (i,x ::acc))
+                |> fun (i,xs) -> (i,Expr.NewTuple(xs |> List.rev))
+            match mm with
+            | MM.Single(_,_) ->
+                (index+1,getValueInfoFromArray index)
+            | MM.Tuple(xs) -> f(index,xs)
+            | MM.Record(_,xs) -> f(index,xs |> Array.map snd)
+        combineValueInfoResult(0,mm) |> snd
+
+    let flattenOutput(value: Expr, mm:MM) : (Expr<ValueInfo[]>) =
+        let rec trans (expr: Expr) (mm:MM) : Expr[] =
+            [|
+                let f(xs:MM[]) = 
+                    xs 
+                    |> Array.mapi (fun i x -> trans (Expr.TupleGet(expr,i)) x)
+                    |> Array.collect id
+                match mm with
+                | MM.Single(_) -> yield expr 
+                | MM.Tuple(xs) -> yield! f(xs)
+                | MM.Record(_,xs) -> yield! f(xs |> Array.map snd)
+            |] 
+        trans (value) mm
+        |> List.ofArray
+        |> Expr.concat<ValueInfo>
+
+    let graph = Graph.Default()
+
+    let transformedFunc = 
+        func 
+        |> simplify 
+        |> Expr.applyTransform  mapRecordsToTuples
+        |> Expr.applyTransforms [| 
+          ExprTransforms.lambdasToLets
+          ExprTransforms.boolTransform
+          singleUseBindings ; 
+          doEvals |]
+        |> processExpr <@ graph @>
+        |> fun f -> 
+            // argument type does not match 
+            let v = Expr.Application(f, assembleInput <@ inputs @> mmIn).EvaluateUntyped()
+            flattenOutput(Expr.Value(v,v.GetType()),mmOut)
+
+    let outputs = transformedFunc.Evaluate()
+
+    let makeValueInfoProto(valueInfo: ValueInfo) = 
+        ValueInfoProto(Name = valueInfo.name, Type = TypeProto(TensorType = TypeProto.Types.Tensor(ElemType = int32 valueInfo.dt)))
+
+    let gp = GraphProto(Name = "G")
+    gp.Input.Add(inputs |> Array.map makeValueInfoProto)
+    gp.Output.Add(outputs |> Array.map makeValueInfoProto)
+    gp.Node.Add(graph.ops)
+    inputs, outputs, gp |> graphToModel
+
 let toOnnxGraph<'a,'b>(expr: Expr<'a -> 'b>)  : DV<'a -> DV<'b>>= 
     let mmIn = getMM (typeof<'a>)
     let mmOut = getMM (typeof<'b>)
-    let buildGraph(func: Expr<'a->'b>) (mmIn:MM) (mmOut:MM) : ValueInfo[]*ValueInfo[]*ModelProto =
-        let inputs = getValueInfo(mmIn)
-
-        let assembleInput(value: Expr) (mm:MM) : (Expr) =
-            let getValueInfoFromArray = 
-                let x = getArray.MakeGenericMethod(typeof<ValueInfo>)
-                fun index -> Expr.Call(x,[value; Expr.Value(index)])
-            let rec combineValueInfoResult(index:int,  mm:MM) : (int*Expr) =
-                let f(index,xs) =
-                    ((index,[]),xs) 
-                    ||> Array.fold (fun (index,acc) x -> combineValueInfoResult(index,  x) |> fun (i,x) -> (i,x ::acc))
-                    |> fun (i,xs) -> (i,Expr.NewTuple(xs |> List.rev))
-                match mm with
-                | MM.Single(_,_) ->
-                    (index+1,getValueInfoFromArray index)
-                | MM.Tuple(xs) -> f(index,xs)
-                | MM.Record(_,xs) -> f(index,xs |> Array.map snd)
-            combineValueInfoResult(0,mm) |> snd
-
-        let flattenOutput(value: Expr, mm:MM) : (Expr<ValueInfo[]>) =
-            let rec trans (expr: Expr) (mm:MM) : Expr[] =
-                [|
-                    let f(xs:MM[]) = 
-                        xs 
-                        |> Array.mapi (fun i x -> trans (Expr.TupleGet(expr,i)) x)
-                        |> Array.collect id
-                    match mm with
-                    | MM.Single(_) -> yield expr 
-                    | MM.Tuple(xs) -> yield! f(xs)
-                    | MM.Record(_,xs) -> yield! f(xs |> Array.map snd)
-                |] 
-            trans (value) mm
-            |> List.ofArray
-            |> Expr.concat<ValueInfo>
-
-        let graph = Graph.Default()
-
-        let transformedFunc = 
-            func 
-            |> simplify 
-            |> Expr.applyTransform  mapRecordsToTuples 
-            |> processExpr <@ graph @>
-            |> fun f -> 
-                // argument type does not match 
-                let v = Expr.Application(f, assembleInput <@ inputs @> mmIn).EvaluateUntyped()
-                flattenOutput(Expr.Value(v,v.GetType()),mmOut)
-
-        let outputs = transformedFunc.Evaluate()
-
-        let makeValueInfoProto(valueInfo: ValueInfo) = 
-            ValueInfoProto(Name = valueInfo.name, Type = TypeProto(TensorType = TypeProto.Types.Tensor(ElemType = int32 valueInfo.dt)))
-
-        let gp = GraphProto(Name = "G")
-        gp.Input.Add(inputs |> Array.map makeValueInfoProto)
-        gp.Output.Add(outputs |> Array.map makeValueInfoProto)
-        gp.Node.Add(graph.ops)
-        inputs, outputs, gp |> graphToModel
 
     let inputs,outputs,model = buildGraph(expr) mmIn mmOut
     // NOTE: Deeply nested structures here would be marginally more performant
