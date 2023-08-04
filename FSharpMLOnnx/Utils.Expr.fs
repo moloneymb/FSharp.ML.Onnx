@@ -51,7 +51,8 @@ module Expr =
                 let (ys,acc) = xs |> List.mapFold (fun (acc:'a) (e:Expr) -> earyStopVisitor f acc e |> swap) acc
                 (acc, RebuildShapeCombination (o, ys))
 
-    let map (f: Expr -> Expr) (expr: Expr) = visitor (fun _ e -> ((),f(e))) () expr |> snd
+    let map (f: Expr -> Expr) (expr: Expr) = 
+      visitor (fun _ e -> ((),f(e))) () expr |> snd
 
     let unfoldWhileChangedWithEarlyStop (f: Expr -> bool*Expr option) (expr: Expr) =
         Seq.unfold (fun expr -> 
@@ -350,6 +351,31 @@ module ExprTransforms =
 //                Some(Expr.Value(expr.EvaluateUntyped(),expr.Type))
 //            | _ -> None)  
 //            |> Seq.map sprintExpr
+
+    // check if option type then special case null
+    let lambdasToLets (t:Expr) =
+      match t with
+      //| Applications(Lambdas(yss,body),xss) ->  
+      | Applications(Let(objectArg, expr,Lambdas(yss,body)),xss) ->  
+        //Some(Choice1Of2(objectArg,expr,yss,body,xss))
+        failwith "todo - figure out how to incorporate this.."
+      | Applications(Lambdas(yss,body),xss) ->  
+        // we are assuming yss and xss shape is the same.. convert to let bindings..
+        let rec f (yss,xss) =
+          match yss,xss with
+          | []::[[]],[]::[[]] -> failwithf "never1 %A %A" yss xss
+          | [[y]],[[x]] -> Expr.Let(y,x,body)
+          | []::yss,[]::xss  -> f(yss,xss)
+          | (y::tailY)::yss,(x::tailX)::xss -> Expr.Let(y,x,f(tailY::yss,tailX::xss))
+          | _ -> failwithf "never2 %A %A" yss xss
+        Some(f(yss,xss))
+      | _ -> None
+
+    let boolTransform (q:Expr) =
+      match q with
+      | IfThenElse (Value(:? bool as v,_),x,y) -> 
+        Some(if v then x else y)
+      | _ -> None
 
 // TODO move and rename
 // TODO also add some logging to make debugging easier

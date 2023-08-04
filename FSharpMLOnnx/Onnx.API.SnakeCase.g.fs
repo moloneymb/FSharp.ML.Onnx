@@ -501,26 +501,26 @@ type Onnx() =
         on.ReduceLogSum(data = data, ?axes = axes, ?keepdims = keepdims, ?noop_with_empty_axes = noop_with_empty_axes)
     static member reduce_log_sum(data: Tensor<double>, ?axes: Tensor<int64>, ?keepdims: int64, ?noop_with_empty_axes: int64) =
         on.ReduceLogSum(data = data, ?axes = axes, ?keepdims = keepdims, ?noop_with_empty_axes = noop_with_empty_axes)
-    static member einsum(equation: string, [<ParamArray>]Inputs: Tensor<uint8>[]) =
-        on.Einsum(equation = equation, Inputs = Inputs)
-    static member einsum(equation: string, [<ParamArray>]Inputs: Tensor<uint16>[]) =
-        on.Einsum(equation = equation, Inputs = Inputs)
-    static member einsum(equation: string, [<ParamArray>]Inputs: Tensor<uint32>[]) =
-        on.Einsum(equation = equation, Inputs = Inputs)
-    static member einsum(equation: string, [<ParamArray>]Inputs: Tensor<uint64>[]) =
-        on.Einsum(equation = equation, Inputs = Inputs)
-    static member einsum(equation: string, [<ParamArray>]Inputs: Tensor<int8>[]) =
-        on.Einsum(equation = equation, Inputs = Inputs)
-    static member einsum(equation: string, [<ParamArray>]Inputs: Tensor<int16>[]) =
-        on.Einsum(equation = equation, Inputs = Inputs)
-    static member einsum(equation: string, [<ParamArray>]Inputs: Tensor<int>[]) =
-        on.Einsum(equation = equation, Inputs = Inputs)
-    static member einsum(equation: string, [<ParamArray>]Inputs: Tensor<int64>[]) =
-        on.Einsum(equation = equation, Inputs = Inputs)
-    static member einsum(equation: string, [<ParamArray>]Inputs: Tensor<float32>[]) =
-        on.Einsum(equation = equation, Inputs = Inputs)
-    static member einsum(equation: string, [<ParamArray>]Inputs: Tensor<double>[]) =
-        on.Einsum(equation = equation, Inputs = Inputs)
+    static member einsum(equation: string, [<ParamArray>]inputs: Tensor<uint8>[]) =
+        on.Einsum(equation = equation, inputs = inputs)
+    static member einsum(equation: string, [<ParamArray>]inputs: Tensor<uint16>[]) =
+        on.Einsum(equation = equation, inputs = inputs)
+    static member einsum(equation: string, [<ParamArray>]inputs: Tensor<uint32>[]) =
+        on.Einsum(equation = equation, inputs = inputs)
+    static member einsum(equation: string, [<ParamArray>]inputs: Tensor<uint64>[]) =
+        on.Einsum(equation = equation, inputs = inputs)
+    static member einsum(equation: string, [<ParamArray>]inputs: Tensor<int8>[]) =
+        on.Einsum(equation = equation, inputs = inputs)
+    static member einsum(equation: string, [<ParamArray>]inputs: Tensor<int16>[]) =
+        on.Einsum(equation = equation, inputs = inputs)
+    static member einsum(equation: string, [<ParamArray>]inputs: Tensor<int>[]) =
+        on.Einsum(equation = equation, inputs = inputs)
+    static member einsum(equation: string, [<ParamArray>]inputs: Tensor<int64>[]) =
+        on.Einsum(equation = equation, inputs = inputs)
+    static member einsum(equation: string, [<ParamArray>]inputs: Tensor<float32>[]) =
+        on.Einsum(equation = equation, inputs = inputs)
+    static member einsum(equation: string, [<ParamArray>]inputs: Tensor<double>[]) =
+        on.Einsum(equation = equation, inputs = inputs)
     static member reduce_log_sum_exp(data: Tensor<uint32>, ?axes: Tensor<int64>, ?keepdims: int64, ?noop_with_empty_axes: int64) =
         on.ReduceLogSumExp(data = data, ?axes = axes, ?keepdims = keepdims, ?noop_with_empty_axes = noop_with_empty_axes)
     static member reduce_log_sum_exp(data: Tensor<uint64>, ?axes: Tensor<int64>, ?keepdims: int64, ?noop_with_empty_axes: int64) =
@@ -871,32 +871,32 @@ type Onnx() =
         on.Elu(X = X, ?alpha = alpha)
     static member elu(X: Tensor<double>, ?alpha: float32) =
         on.Elu(X = X, ?alpha = alpha)
-    static member reshape(data: Tensor<uint8>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
-    static member reshape(data: Tensor<uint16>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
-    static member reshape(data: Tensor<uint32>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
-    static member reshape(data: Tensor<uint64>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
-    static member reshape(data: Tensor<int8>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
-    static member reshape(data: Tensor<int16>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
-    static member reshape(data: Tensor<int>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
-    static member reshape(data: Tensor<int64>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
-    static member reshape(data: Tensor<float32>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
-    static member reshape(data: Tensor<double>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
-    static member reshape(data: Tensor<string>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
-    static member reshape(data: Tensor<bool>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
-    static member reshape(data: Tensor<Complex>, shape: Tensor<int64>, ?allowzero: int64) =
-        on.Reshape(data = data, shape = shape, ?allowzero = allowzero)
+    static member reshape(data: Tensor<uint8>, shape: Tensor<int64> ) =
+        on.Reshape(data = data, shape = shape)
+    static member reshape(data: Tensor<uint16>, shape: Tensor<int64>) =
+        on.Reshape(data = data, shape = shape)
+    static member reshape(data: Tensor<uint32>, shape: Tensor<int64>) =
+        on.Reshape(data = data, shape = shape)
+    static member reshape(data: Tensor<uint64>, shape: Tensor<int64>) =
+        on.Reshape(data = data, shape = shape)
+    static member reshape(data: Tensor<int8>, shape: Tensor<int64>) =
+        on.Reshape(data = data, shape = shape)
+    static member reshape(data: Tensor<int16>, shape: Tensor<int64>) =
+        on.Reshape(data = data, shape = shape)
+    static member reshape(data: Tensor<int>, shape: Tensor<int64>) =
+        on.Reshape(data = data, shape = shape)
+    static member reshape(data: Tensor<int64>, shape: Tensor<int64>) =
+        on.Reshape(data = data, shape = shape)
+    static member reshape(data: Tensor<float32>, shape: Tensor<int64>) =
+        on.Reshape(data = data, shape = shape)
+    static member reshape(data: Tensor<double>, shape: Tensor<int64>) =
+        on.Reshape(data = data, shape = shape)
+    static member reshape(data: Tensor<string>, shape: Tensor<int64>) =
+        on.Reshape(data = data, shape = shape)
+    static member reshape(data: Tensor<bool>, shape: Tensor<int64>) =
+        on.Reshape(data = data, shape = shape)
+    static member reshape(data: Tensor<Complex>, shape: Tensor<int64>) =
+        on.Reshape(data = data, shape = shape)
     static member selu(X: Tensor<float32>, ?alpha: float32, ?gamma: float32) =
         on.Selu(X = X, ?alpha = alpha, ?gamma = gamma)
     static member selu(X: Tensor<double>, ?alpha: float32, ?gamma: float32) =
@@ -1443,32 +1443,32 @@ type Onnx() =
         on.IsNaN(X = X)
     static member is_nan(X: Tensor<double>) =
         on.IsNaN(X = X)
-    static member shape(data: Tensor<uint8>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
-    static member shape(data: Tensor<uint16>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
-    static member shape(data: Tensor<uint32>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
-    static member shape(data: Tensor<uint64>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
-    static member shape(data: Tensor<int8>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
-    static member shape(data: Tensor<int16>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
-    static member shape(data: Tensor<int>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
-    static member shape(data: Tensor<int64>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
-    static member shape(data: Tensor<float32>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
-    static member shape(data: Tensor<double>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
-    static member shape(data: Tensor<string>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
-    static member shape(data: Tensor<bool>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
-    static member shape(data: Tensor<Complex>, ?end: int64, ?start: int64) =
-        on.Shape(data = data, ?end = end, ?start = start)
+    static member shape(data: Tensor<uint8>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
+    static member shape(data: Tensor<uint16>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
+    static member shape(data: Tensor<uint32>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
+    static member shape(data: Tensor<uint64>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
+    static member shape(data: Tensor<int8>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
+    static member shape(data: Tensor<int16>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
+    static member shape(data: Tensor<int>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
+    static member shape(data: Tensor<int64>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
+    static member shape(data: Tensor<float32>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
+    static member shape(data: Tensor<double>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
+    static member shape(data: Tensor<string>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
+    static member shape(data: Tensor<bool>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
+    static member shape(data: Tensor<Complex>, ?end_: int64, ?start: int64) =
+        on.Shape(data = data, ?end_ = end_, ?start = start)
     static member size(data: Tensor<uint8>) =
         on.Size(data = data)
     static member size(data: Tensor<uint16>) =

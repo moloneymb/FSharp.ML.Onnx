@@ -499,26 +499,26 @@ type Onnx() =
         MV() |> fun mv -> execNode<float32> "ReduceLogSum" ([|Some(mv.c(data)); mv.c(axes)|] |> Array.choose id) ([|Attr.int("keepdims", keepdims, 1L); Attr.int("noop_with_empty_axes", noop_with_empty_axes, 0L)|] |> Array.choose id)
     static member ReduceLogSum(data: Tensor<double>, ?axes: Tensor<int64>, ?keepdims: int64, ?noop_with_empty_axes: int64) =
         MV() |> fun mv -> execNode<double> "ReduceLogSum" ([|Some(mv.c(data)); mv.c(axes)|] |> Array.choose id) ([|Attr.int("keepdims", keepdims, 1L); Attr.int("noop_with_empty_axes", noop_with_empty_axes, 0L)|] |> Array.choose id)
-    static member Einsum(equation: string, [<ParamArray>]Inputs: Tensor<uint8>[]) =
-        MV() |> fun mv -> execNode<uint8> "Einsum" (mv.c(Inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
-    static member Einsum(equation: string, [<ParamArray>]Inputs: Tensor<uint16>[]) =
-        MV() |> fun mv -> execNode<uint16> "Einsum" (mv.c(Inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
-    static member Einsum(equation: string, [<ParamArray>]Inputs: Tensor<uint32>[]) =
-        MV() |> fun mv -> execNode<uint32> "Einsum" (mv.c(Inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
-    static member Einsum(equation: string, [<ParamArray>]Inputs: Tensor<uint64>[]) =
-        MV() |> fun mv -> execNode<uint64> "Einsum" (mv.c(Inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
-    static member Einsum(equation: string, [<ParamArray>]Inputs: Tensor<int8>[]) =
-        MV() |> fun mv -> execNode<int8> "Einsum" (mv.c(Inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
-    static member Einsum(equation: string, [<ParamArray>]Inputs: Tensor<int16>[]) =
-        MV() |> fun mv -> execNode<int16> "Einsum" (mv.c(Inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
-    static member Einsum(equation: string, [<ParamArray>]Inputs: Tensor<int>[]) =
-        MV() |> fun mv -> execNode<int> "Einsum" (mv.c(Inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
-    static member Einsum(equation: string, [<ParamArray>]Inputs: Tensor<int64>[]) =
-        MV() |> fun mv -> execNode<int64> "Einsum" (mv.c(Inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
-    static member Einsum(equation: string, [<ParamArray>]Inputs: Tensor<float32>[]) =
-        MV() |> fun mv -> execNode<float32> "Einsum" (mv.c(Inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
-    static member Einsum(equation: string, [<ParamArray>]Inputs: Tensor<double>[]) =
-        MV() |> fun mv -> execNode<double> "Einsum" (mv.c(Inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
+    static member Einsum(equation: string, [<ParamArray>]inputs: Tensor<uint8>[]) =
+        MV() |> fun mv -> execNode<uint8> "Einsum" (mv.c(inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
+    static member Einsum(equation: string, [<ParamArray>]inputs: Tensor<uint16>[]) =
+        MV() |> fun mv -> execNode<uint16> "Einsum" (mv.c(inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
+    static member Einsum(equation: string, [<ParamArray>]inputs: Tensor<uint32>[]) =
+        MV() |> fun mv -> execNode<uint32> "Einsum" (mv.c(inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
+    static member Einsum(equation: string, [<ParamArray>]inputs: Tensor<uint64>[]) =
+        MV() |> fun mv -> execNode<uint64> "Einsum" (mv.c(inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
+    static member Einsum(equation: string, [<ParamArray>]inputs: Tensor<int8>[]) =
+        MV() |> fun mv -> execNode<int8> "Einsum" (mv.c(inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
+    static member Einsum(equation: string, [<ParamArray>]inputs: Tensor<int16>[]) =
+        MV() |> fun mv -> execNode<int16> "Einsum" (mv.c(inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
+    static member Einsum(equation: string, [<ParamArray>]inputs: Tensor<int>[]) =
+        MV() |> fun mv -> execNode<int> "Einsum" (mv.c(inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
+    static member Einsum(equation: string, [<ParamArray>]inputs: Tensor<int64>[]) =
+        MV() |> fun mv -> execNode<int64> "Einsum" (mv.c(inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
+    static member Einsum(equation: string, [<ParamArray>]inputs: Tensor<float32>[]) =
+        MV() |> fun mv -> execNode<float32> "Einsum" (mv.c(inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
+    static member Einsum(equation: string, [<ParamArray>]inputs: Tensor<double>[]) =
+        MV() |> fun mv -> execNode<double> "Einsum" (mv.c(inputs)) ([|Attr.string("equation", equation)|] |> Array.choose id)
     static member ReduceLogSumExp(data: Tensor<uint32>, ?axes: Tensor<int64>, ?keepdims: int64, ?noop_with_empty_axes: int64) =
         MV() |> fun mv -> execNode<uint32> "ReduceLogSumExp" ([|Some(mv.c(data)); mv.c(axes)|] |> Array.choose id) ([|Attr.int("keepdims", keepdims, 1L); Attr.int("noop_with_empty_axes", noop_with_empty_axes, 0L)|] |> Array.choose id)
     static member ReduceLogSumExp(data: Tensor<uint64>, ?axes: Tensor<int64>, ?keepdims: int64, ?noop_with_empty_axes: int64) =
@@ -869,32 +869,32 @@ type Onnx() =
         MV() |> fun mv -> execNode<float32> "Elu" [|mv.c(X)|] ([|Attr.float("alpha", alpha, 1.0f)|] |> Array.choose id)
     static member Elu(X: Tensor<double>, ?alpha: float32) =
         MV() |> fun mv -> execNode<double> "Elu" [|mv.c(X)|] ([|Attr.float("alpha", alpha, 1.0f)|] |> Array.choose id)
-    static member Reshape(data: Tensor<uint8>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<uint8> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
-    static member Reshape(data: Tensor<uint16>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<uint16> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
-    static member Reshape(data: Tensor<uint32>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<uint32> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
-    static member Reshape(data: Tensor<uint64>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<uint64> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
-    static member Reshape(data: Tensor<int8>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<int8> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
-    static member Reshape(data: Tensor<int16>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<int16> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
-    static member Reshape(data: Tensor<int>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<int> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
-    static member Reshape(data: Tensor<int64>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<int64> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
-    static member Reshape(data: Tensor<float32>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<float32> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
-    static member Reshape(data: Tensor<double>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<double> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
-    static member Reshape(data: Tensor<string>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<string> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
-    static member Reshape(data: Tensor<bool>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<bool> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
-    static member Reshape(data: Tensor<Complex>, shape: Tensor<int64>, ?allowzero: int64) =
-        MV() |> fun mv -> execNode<Complex> "Reshape" [|mv.c(data); mv.c(shape)|] ([|Attr.int("allowzero", allowzero, 0L)|] |> Array.choose id)
+    static member Reshape(data: Tensor<uint8>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<uint8> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
+    static member Reshape(data: Tensor<uint16>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<uint16> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
+    static member Reshape(data: Tensor<uint32>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<uint32> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
+    static member Reshape(data: Tensor<uint64>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<uint64> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
+    static member Reshape(data: Tensor<int8>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<int8> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
+    static member Reshape(data: Tensor<int16>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<int16> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
+    static member Reshape(data: Tensor<int>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<int> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
+    static member Reshape(data: Tensor<int64>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<int64> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
+    static member Reshape(data: Tensor<float32>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<float32> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
+    static member Reshape(data: Tensor<double>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<double> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
+    static member Reshape(data: Tensor<string>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<string> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
+    static member Reshape(data: Tensor<bool>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<bool> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
+    static member Reshape(data: Tensor<Complex>, shape: Tensor<int64>) =
+        MV() |> fun mv -> execNode<Complex> "Reshape" [|mv.c(data); mv.c(shape)|] ([||] |> Array.choose id)
     static member Selu(X: Tensor<float32>, ?alpha: float32, ?gamma: float32) =
         MV() |> fun mv -> execNode<float32> "Selu" [|mv.c(X)|] ([|Attr.float("alpha", alpha, 1.6732631921768188f); Attr.float("gamma", gamma, 1.0507010221481323f)|] |> Array.choose id)
     static member Selu(X: Tensor<double>, ?alpha: float32, ?gamma: float32) =
@@ -1441,32 +1441,32 @@ type Onnx() =
         MV() |> fun mv -> execNode<bool> "IsNaN" [|mv.c(X)|] [||]
     static member IsNaN(X: Tensor<double>) =
         MV() |> fun mv -> execNode<bool> "IsNaN" [|mv.c(X)|] [||]
-    static member Shape(data: Tensor<uint8>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
-    static member Shape(data: Tensor<uint16>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
-    static member Shape(data: Tensor<uint32>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
-    static member Shape(data: Tensor<uint64>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
-    static member Shape(data: Tensor<int8>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
-    static member Shape(data: Tensor<int16>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
-    static member Shape(data: Tensor<int>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
-    static member Shape(data: Tensor<int64>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
-    static member Shape(data: Tensor<float32>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
-    static member Shape(data: Tensor<double>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
-    static member Shape(data: Tensor<string>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
-    static member Shape(data: Tensor<bool>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
-    static member Shape(data: Tensor<Complex>, ?end: int64, ?start: int64) =
-        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end", end); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<uint8>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<uint16>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<uint32>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<uint64>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<int8>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<int16>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<int>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<int64>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<float32>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<double>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<string>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<bool>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
+    static member Shape(data: Tensor<Complex>, ?end_: int64, ?start: int64) =
+        MV() |> fun mv -> execNode<int64> "Shape" [|mv.c(data)|] ([|Attr.int("end_", end_); Attr.int("start", start, 0L)|] |> Array.choose id)
     static member Size(data: Tensor<uint8>) =
         MV() |> fun mv -> execNode<int64> "Size" [|mv.c(data)|] [||]
     static member Size(data: Tensor<uint16>) =

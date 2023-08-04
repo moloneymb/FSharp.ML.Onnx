@@ -1,7 +1,8 @@
 ﻿// TODO use FSI in Ionide for .net core
-#I @"C:\EE\Git\ONNXBackend\FSharpMLOnnx\bin\Debug\netcoreapp3.1"
+//#I @"C:\EE\Git\ONNXBackend\FSharpMLOnnx\bin\Debug\netstandard
 #I @"C:\Users\moloneymb\.nuget\packages\"
-#r @"google.protobuf\3.11.4\lib\netstandard2.0\Google.Protobuf.dll"
+#r @"google.protobuf\3.23.4\lib\netstandard2.0\Google.Protobuf.dll"
+#I @"C:\EE\Git\FSharp.ML.Onnx\FSharpMLOnnx\bin\Debug\netstandard2.0"
 #r @"microsoft.ml.onnxruntime\1.1.2\lib\netstandard1.1\Microsoft.ML.OnnxRuntime.dll"
 #r @"fsharp.quotations.evaluator\2.1.0\lib\netstandard2.0\FSharp.Quotations.Evaluator.dll"
 #r "OnnxMLProto.dll"
