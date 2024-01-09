@@ -614,7 +614,8 @@ def write_graph_api(path):
 
 write_graph_api(graph_path)
 write_api(snake_path, snake_module, True, False)
+write_api(pascal_path, pascal_module, False, False)
 
-#write_api(pascal_path, pascal_module, False, False)
+
 #write_api(curried_path, curried_module, True,True)
 
