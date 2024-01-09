@@ -15,6 +15,84 @@ open Microsoft.FSharp.Reflection
 open FSharp.ML.Onnx.Protobuf
 open Onnx
 
+type MethodSubstitution( name: string ) =
+    inherit System.Attribute()
+    member this.Name = name
+
+let (|TryGetMethodSubstitution|_|) (methodInfo:Reflection.MethodInfo) : Option<string> =
+  match methodInfo.GetCustomAttributes(typeof<MethodSubstitution>,false) with 
+  | [| :? MethodSubstitution as ms|] -> Some(ms.Name)
+  | _ -> None
+
+let rec containsRecord (t:Type) : bool =
+    if FSharpType.IsRecord t then true
+    elif FSharpType.IsTuple t then
+        FSharpType.GetTupleElements t |> Array.exists containsRecord
+    else false
+
+let rec mapType2 (t:Type) = 
+    if FSharpType.IsRecord t then
+        let fields = FSharpType.GetRecordFields t
+        FSharpType.MakeTupleType(fields |> Array.map (fun x -> x.PropertyType |> mapType2))
+    elif FSharpType.IsTuple t then
+        if not <| containsRecord t then t
+        else 
+            FSharpType.MakeTupleType(t |> FSharpType.GetTupleElements |> Array.map mapType2)
+    else t
+
+let mapRecordsToTuples(expr:Expr) = 
+    let rec getRecordFields(t:Type) : (string*System.Reflection.PropertyInfo[])[] = 
+        [| 
+            if FSharpType.IsRecord t then 
+                let fields = FSharpType.GetRecordFields t
+                yield t.FullName,fields
+                yield! fields |> Array.collect (fun f -> getRecordFields f.PropertyType)
+            elif FSharpType.IsTuple t then
+                yield! FSharpType.GetTupleElements t |> Array.collect (fun x -> getRecordFields x)
+        |]
+
+    let mapRecordsToTuples   = 
+        let rec mapRecordsToTuples (vars:Map<Var,Var>) (expr:Expr) = 
+            match expr with
+            | Var(Found vars (v)) -> Some(Expr.Var(v))
+            | Var(v) when containsRecord v.Type -> 
+                // I'm not sure when this would happen outside of an identiy Expr
+                Some(Expr.Var(Var(v.Name,mapType2 v.Type,v.IsMutable)))
+            | Let(v,e1,e2) when v.Type |> containsRecord -> 
+                let v2 = Var(v.Name,mapType2 v.Type)
+                printfn "Var changed %s %s %s" v.Name v.Type.Name v2.Type.Name
+                let f e = e |> Expr.applyTransform (mapRecordsToTuples (vars.Add(v,v2)))
+                Some(Expr.Let(v2, f e1,f e2))
+            | Lambda(v,e) when v.Type |> containsRecord ->
+                let v2 = Var(v.Name,mapType2 v.Type)
+                printfn "Var changed %s %s %s" v.Name v.Type.Name v2.Type.Name
+                Some(Expr.Lambda(v2, e |> Expr.applyTransform (mapRecordsToTuples (vars.Add(v,v2)))))
+            | TupleGet(x,i) -> 
+                // NOTE: This is needed as the type change needs to be threaded through
+                x |> Expr.unfoldWhileChanged (mapRecordsToTuples vars) |> Seq.tryLast
+                |> Option.map (fun x -> Expr.TupleGet(x,i))
+            | NewRecord(_,xs) ->
+               Some(Expr.NewTuple(xs |> List.map (Expr.applyTransform (mapRecordsToTuples vars)))) 
+            | NewTuple(xs) -> 
+                // check if any changes were made
+                let ys = xs |> List.map (fun x -> x |> Expr.unfoldWhileChanged (mapRecordsToTuples vars) |> Seq.tryLast)
+                if ys |> List.exists Option.isSome then
+                    Some(Expr.NewTuple((xs,ys) ||> List.zip |> List.map (fun (x,y) -> defaultArg y x)))
+                else
+                    None
+            | PropertyGet(Some(e),propertyInfo,[]) ->
+                if FSharpType.IsRecord propertyInfo.DeclaringType then
+                    FSharpType.GetRecordFields propertyInfo.DeclaringType 
+                    |> Array.indexed 
+                    |> Array.tryFind (fun (_,x) -> propertyInfo.Name = x.Name )
+                    |> Option.map (fun (i,_) -> Expr.TupleGet(e |> Expr.applyTransform (mapRecordsToTuples vars) ,i))
+                else
+                    None
+            | _ -> None
+        mapRecordsToTuples Map.empty
+    mapRecordsToTuples expr
+
+
 // exclude 
 let canEval(q:Expr) =
   let blackListTypeNames = set ["FSharp.ML.Onnx.API.PascalCase+Onnx"]
@@ -183,17 +261,18 @@ let filterMethods (m: Reflection.MethodInfo) =
     | "ToString" -> false
     | _ -> true
 
-let onMethodsPascal = 
-    typeof<FSharp.ML.Onnx.API.PascalCase.Onnx>.GetMethods() 
-    |> Array.filter filterMethods
+// Thid does not appear to be used anywhere..
+//let mutable onMethodsPascal = 
+//    typeof<FSharp.ML.Onnx.API.PascalCase.Onnx>.GetMethods() 
+//    |> Array.filter filterMethods
 
-let targetMethods = 
+let mutable targetMethods = 
     typeof<OnnxGraph>.GetMethods() 
     |> Array.filter filterMethods
     |> Array.map (fun mi -> mi.Name,mi)
     |> Map.ofArray
 
-let constantFunction = 
+let mutable constantFunction = 
     typeof<Constants>.GetMethods() 
     |> Array.filter filterMethods
     |> Array.map (fun mi -> (mi.GetParameters().[1].ParameterType.FullName,mi)) 
@@ -201,10 +280,13 @@ let constantFunction =
 
 let ONNXAPIFullName =
     typeof<FSharp.ML.Onnx.API.PascalCase.Onnx>.FullName
+
 let ONNXAPIGraphFullName =
     typeof<FSharp.ML.Onnx.API.Graph.OnnxGraph>.FullName
 
-let whiteListNamespaces =
+
+
+let mutable whiteListNamespaces =
     [|
         ONNXAPIFullName
         //"Microsoft.FSharp.Core.Operators"
@@ -286,7 +368,11 @@ type Expr with
     static member Call(instanceO : Expr option, mi : Reflection.MethodInfo, args: Expr list) = 
         match instanceO with | Some(x) -> Expr.Call(x,mi,args) | None -> Expr.Call(mi,args)
 
-let processExpr (graphExpr:Expr<Graph>) (expr: Expr) : Expr = 
+// wrapping functions in a class for optional parameters
+// will move instance globals into instance at a later date
+type OnnxProcessor() =
+  static member ProcessExpr(expr: Expr,graphExpr:Expr<Graph>, ?mappedFunctions: Map<string,Var list * Expr>) : Expr = 
+    let mappedFunctions = defaultArg mappedFunctions Map.empty
     let rec processExpr (varMap: Map<Var,Var>) (expr: Expr) : Expr = 
         //printfn "%s" (sprintf "%A"expr |> fun x -> x.Substring(0,min 60 (x.Length - 1)))
         match expr with
@@ -311,7 +397,10 @@ let processExpr (graphExpr:Expr<Graph>) (expr: Expr) : Expr =
           else
             match tryAssignable v.PropertyType with
             | Some(u) -> Expr.Call(constantFunction.[u.FullName],[graphExpr; expr])
-            | None -> failwithf "Unsupported PropertyGet %A as type is not assignable to a supported type" expr
+            | None -> 
+              //let obj = expr.EvaluateUntyped()
+              //Expr.Value(obj,obj.GetType()) // yeeet
+              failwithf "Unsupported PropertyGet %A as type is not assignable to a supported type" expr
         | FieldGet (_,v) as expr ->
             match tryAssignable v.FieldType with
             | Some(u) -> Expr.Call(constantFunction.[u.FullName],[graphExpr; expr])
@@ -321,6 +410,18 @@ let processExpr (graphExpr:Expr<Graph>) (expr: Expr) : Expr =
             match tryAssignable t with
             | Some(u) -> Expr.Call(constantFunction.[u.FullName],[graphExpr; expr]) 
             | None -> failwithf "Unsupported Coercions %A as type is not assignable to a supported type" expr
+
+        | Call(None,TryGetMethodSubstitution(name),callArgs) ->
+          match mappedFunctions.TryFind(name) with
+          | None -> 
+            failwithf "Expression for substitution %s was not found" name
+          | Some(args,innerExpr) -> 
+            // TODO - make this a bit more elegant... maybe..
+            if callArgs.Length = args.Length - 1 then
+              (innerExpr,(args,[yield graphExpr.Raw;yield! (callArgs |> List.map (processExpr varMap))]) ||> List.zip) ||> List.fold (fun x (y,z) -> Expr.Let(y,z,x))
+            else
+              failwithf "MethodSubstitution arg length missmatch %A %A" callArgs args
+
         | Call(instanceO,mi,args) as expr ->
             if isWhitelist mi.DeclaringType then
                 if mi.DeclaringType.FullName = ONNXAPIGraphFullName then
@@ -338,6 +439,9 @@ let processExpr (graphExpr:Expr<Graph>) (expr: Expr) : Expr =
                     | None -> failwithf "Unsupported %s method %s" ONNXAPIFullName mi.Name
                 else 
                     match mi.GetGenericArguments() |> Array.map  mapType |> Option.all with
+//                    | Some([||]) ->
+//                        // for when we're unable to de generic?
+//                        Expr.Call(instanceO,mi,args |> List.map (processExpr varMap))
                     | Some(ts) -> 
                         let mi' = mi.GetGenericMethodDefinition().MakeGenericMethod(ts)
                         Expr.Call(instanceO,mi',args |> List.map (processExpr varMap))
@@ -359,75 +463,7 @@ let processExpr (graphExpr:Expr<Graph>) (expr: Expr) : Expr =
             RebuildShapeCombination (o, xs |> List.map (processExpr varMap))
     processExpr Map.empty expr 
 
-let rec containsRecord (t:Type) : bool =
-    if FSharpType.IsRecord t then true
-    elif FSharpType.IsTuple t then
-        FSharpType.GetTupleElements t |> Array.exists containsRecord
-    else false
-
-let rec mapType2 (t:Type) = 
-    if FSharpType.IsRecord t then
-        let fields = FSharpType.GetRecordFields t
-        FSharpType.MakeTupleType(fields |> Array.map (fun x -> x.PropertyType |> mapType2))
-    elif FSharpType.IsTuple t then
-        if not <| containsRecord t then t
-        else 
-            FSharpType.MakeTupleType(t |> FSharpType.GetTupleElements |> Array.map mapType2)
-    else t
-
-let mapRecordsToTuples(expr:Expr) = 
-    let rec getRecordFields(t:Type) : (string*System.Reflection.PropertyInfo[])[] = 
-        [| 
-            if FSharpType.IsRecord t then 
-                let fields = FSharpType.GetRecordFields t
-                yield t.FullName,fields
-                yield! fields |> Array.collect (fun f -> getRecordFields f.PropertyType)
-            elif FSharpType.IsTuple t then
-                yield! FSharpType.GetTupleElements t |> Array.collect (fun x -> getRecordFields x)
-        |]
-
-    let mapRecordsToTuples   = 
-        let rec mapRecordsToTuples (vars:Map<Var,Var>) (expr:Expr) = 
-            match expr with
-            | Var(Found vars (v)) -> Some(Expr.Var(v))
-            | Var(v) when containsRecord v.Type -> 
-                // I'm not sure when this would happen outside of an identiy Expr
-                Some(Expr.Var(Var(v.Name,mapType2 v.Type,v.IsMutable)))
-            | Let(v,e1,e2) when v.Type |> containsRecord -> 
-                let v2 = Var(v.Name,mapType2 v.Type)
-                printfn "Var changed %s %s %s" v.Name v.Type.Name v2.Type.Name
-                let f e = e |> Expr.applyTransform (mapRecordsToTuples (vars.Add(v,v2)))
-                Some(Expr.Let(v2, f e1,f e2))
-            | Lambda(v,e) when v.Type |> containsRecord ->
-                let v2 = Var(v.Name,mapType2 v.Type)
-                printfn "Var changed %s %s %s" v.Name v.Type.Name v2.Type.Name
-                Some(Expr.Lambda(v2, e |> Expr.applyTransform (mapRecordsToTuples (vars.Add(v,v2)))))
-            | TupleGet(x,i) -> 
-                // NOTE: This is needed as the type change needs to be threaded through
-                x |> Expr.unfoldWhileChanged (mapRecordsToTuples vars) |> Seq.tryLast
-                |> Option.map (fun x -> Expr.TupleGet(x,i))
-            | NewRecord(_,xs) ->
-               Some(Expr.NewTuple(xs |> List.map (Expr.applyTransform (mapRecordsToTuples vars)))) 
-            | NewTuple(xs) -> 
-                // check if any changes were made
-                let ys = xs |> List.map (fun x -> x |> Expr.unfoldWhileChanged (mapRecordsToTuples vars) |> Seq.tryLast)
-                if ys |> List.exists Option.isSome then
-                    Some(Expr.NewTuple((xs,ys) ||> List.zip |> List.map (fun (x,y) -> defaultArg y x)))
-                else
-                    None
-            | PropertyGet(Some(e),propertyInfo,[]) ->
-                if FSharpType.IsRecord propertyInfo.DeclaringType then
-                    FSharpType.GetRecordFields propertyInfo.DeclaringType 
-                    |> Array.indexed 
-                    |> Array.tryFind (fun (_,x) -> propertyInfo.Name = x.Name )
-                    |> Option.map (fun (i,_) -> Expr.TupleGet(e |> Expr.applyTransform (mapRecordsToTuples vars) ,i))
-                else
-                    None
-            | _ -> None
-        mapRecordsToTuples Map.empty
-    mapRecordsToTuples expr
-
-let buildGraph(func: Expr<'a->'b>) (mmIn:MM) (mmOut:MM) : ValueInfo[]*ValueInfo[]*ModelProto =
+  static BuildGraph(func: Expr<'a->'b>,mmIn:MM,mmOut:MM, ?mappedFunctions:Map<string,Var list * Expr>) : ValueInfo[]*ValueInfo[]*ModelProto =
     let inputs = getValueInfo(mmIn)
 
     let assembleInput(value: Expr) (mm:MM) : (Expr) =
@@ -473,7 +509,7 @@ let buildGraph(func: Expr<'a->'b>) (mmIn:MM) (mmOut:MM) : ValueInfo[]*ValueInfo[
           ExprTransforms.boolTransform
           singleUseBindings ; 
           doEvals |]
-        |> processExpr <@ graph @>
+        |> fun x -> OnnxProcessor.ProcessExpr(x,<@ graph @>,?mappedFunctions=mappedFunctions)
         |> fun f -> 
             // argument type does not match 
             let v = Expr.Application(f, assembleInput <@ inputs @> mmIn).EvaluateUntyped()
@@ -490,11 +526,13 @@ let buildGraph(func: Expr<'a->'b>) (mmIn:MM) (mmOut:MM) : ValueInfo[]*ValueInfo[
     gp.Node.Add(graph.ops)
     inputs, outputs, gp |> graphToModel
 
-let toOnnxGraph<'a,'b>(expr: Expr<'a -> 'b>)  : DV<'a -> DV<'b>>= 
+  static ToOnnxGraph<'a,'b>(expr: Expr<'a -> 'b>,?extraFunctions:FunctionProto[],?mappedFunctions)  : DV<'a -> DV<'b>>= 
     let mmIn = getMM (typeof<'a>)
     let mmOut = getMM (typeof<'b>)
 
-    let inputs,outputs,model = buildGraph(expr) mmIn mmOut
+    let inputs,outputs,model = OnnxProcessor.BuildGraph(expr,mmIn,mmOut,?mappedFunctions=mappedFunctions)
+    extraFunctions |> Option.iter model.Functions.AddRange
+
     // NOTE: Deeply nested structures here would be marginally more performant
     // NOTE: wrap in a Lambda expression and cast and compile into a function
     // Alternatively do common expression elimination

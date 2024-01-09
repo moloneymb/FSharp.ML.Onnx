@@ -20,13 +20,12 @@
     <Compile Include="Onnx.Extensions.fs" />
     <None Include="onnx_code_gen.py" />
     <None Include="SetupNotes.md" />
-    <None Include="CodeGen.fsx" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FSharp.Quotations.Evaluator" Version="2.1.0" />
-    <PackageReference Include="Google.Protobuf" Version="3.23.4" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.15.1" />
+    <PackageReference Include="Google.Protobuf" Version="3.25.1" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.16.3" />
     <PackageReference Include="System.Runtime" Version="4.3.1" />
   </ItemGroup>
 
@@ -37,7 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="7.0.300" />
+    <PackageReference Update="FSharp.Core" Version="8.0.100" />
   </ItemGroup>
 
 </Project>

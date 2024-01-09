@@ -1,6 +1,11 @@
 # Onnx for FSharp
 This is an experimental F# API for Onnx. 
+
 The problem this library aims to solve is to combine the ease of use of an Eager Execution API with the speed of a Graph API.  The API is code generated from the Onnx operator definitions. 
+
+It's possible to write Onnx graphs directly from high level F# functions which mix in normal code (that is evaluated at transform time) and Onnx functions.
+
+
 
 # Example
 ```fsharp
@@ -26,14 +31,12 @@ type MNIST() =
 ## DONE
 *	Eager Execution API for snake and pascal
 *	F# Quotation -> Onnx transform
+*    at transform time - support things like static conditionals which are useful for graph construction
+*   Support symbolic ops as OnnxFunctions 
+    * this is different to normal functions which are expanded in the transform
 
 ## TODO
-*	Nuget package
-*	Encapsulate Tensor type to support operator overloads
-*	Code Analyzer to check code is transformable at design time
-*	Shape Analyzer to graph has valid shapes at design time
-*	Onnx graph optimizer passes
-*	Onnx training
+*   fix tests 'converted graph' and 'defining new functions' 
 
 ## Limitations
 *	Eager Execution needs to clone memory which penalizes performance
@@ -44,5 +47,10 @@ type MNIST() =
 *	Not all Onnx Ops are supported at this time
 
 ## Out of scope
+*	Nuget package
 *	Partial graph evaluation - this requires external knowledge of the generated graph which breaks the abstraction
 *	C++ wrapper interface for Onnx
+*	Onnx training
+*	Code Analyzer to check code is transformable at design time
+*	Encapsulate Tensor type to support operator overloads
+*	Shape Analyzer to graph has valid shapes at design time

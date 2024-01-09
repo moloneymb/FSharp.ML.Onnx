@@ -3,8 +3,9 @@
     I don't have a prefered method at this stage. This is not being used at this stage as it's fine
     to run the with Call for the purposes of building a ONNX Graph
 *)
+(*
 #load "Base.fsx"
-open Common
+//open Common
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.DerivedPatterns
 open Microsoft.FSharp.Quotations.Patterns
@@ -72,3 +73,4 @@ let expand (g: MethodInfo -> Expr option) (expr: Expr) =
     //| Patterns.Call(instanceO, (TryFunc f (Lambdas(yss,_) as rd)), zs) ->
     | _ -> None
 
+*)

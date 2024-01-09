@@ -1,4 +1,5 @@
-﻿#load "Base.fsx"
+﻿(*
+#load "Base.fsx"
 open Base
 let mnistG = MNIST()
 
@@ -117,3 +118,4 @@ let processExpr (expr: Expr) : Expr =
 //[<ReflectedDefinition>]
 //module X = 
 //    let foo x = x
+*)
